@@ -1,0 +1,16 @@
+{
+    "name": "zerifas/supermodel",
+    "description": "A super-simple model class.",
+    "authors": [
+        {
+            "name": "Mat Gadd",
+            "email": "mat@zerifas.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Zerifas\\Supermodel\\": "src/"
+        }
+    },
+    "require": {}
+}
