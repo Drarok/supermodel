@@ -35,6 +35,34 @@ abstract class Date
     }
 
     /**
+     * Transform an ISO8601 format string for a DateTime.
+     *
+     * @param string $string Datetime string.
+     *
+     * @return DateTime
+     */
+    public static function fromISO8601DateTimeString($string)
+    {
+        return DateTime::createFromFormat(DateTime::ISO8601, $string);
+    }
+
+    /**
+     * Transform a DateTime to an ISO8601 format string.
+     *
+     * @param DateTime $datetime DateTime object.
+     *
+     * @return string
+     */
+    public static function fromISO8601DateTime(DateTime $datetime = null)
+    {
+        if ($datetime === null) {
+            return null;
+        }
+
+        return $datetime->format(DateTime::ISO8601);
+    }
+
+    /**
      * Convert a timestamp integer to a DateTime instance.
      *
      * @param int $timestamp UNIX timestamp.
