@@ -11,13 +11,13 @@ abstract class Boolean
      *
      * @return bool
      */
-    public static function fromInteger($integer)
+    public static function fromInteger($int)
     {
-        if ($integer === null) {
+        if ($int === null) {
             return null;
         }
 
-        return ($integer !== 0);
+        return ($int !== 0);
     }
 
     /**
