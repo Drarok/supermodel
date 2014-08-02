@@ -13,6 +13,10 @@ abstract class Boolean
      */
     public static function fromInteger($integer)
     {
+        if ($integer === null) {
+            return null;
+        }
+
         return ($integer !== 0);
     }
 

@@ -15,6 +15,10 @@ abstract class Date
      */
     public static function fromDateTimeString($string)
     {
+        if ($string === null) {
+            return null;
+        }
+
         return DateTime::createFromFormat('Y-m-d H:i:s', $string);
     }
 
@@ -43,6 +47,10 @@ abstract class Date
      */
     public static function fromISO8601DateTimeString($string)
     {
+        if ($string === null) {
+            return null;
+        }
+
         return DateTime::createFromFormat(DateTime::ISO8601, $string);
     }
 
@@ -71,6 +79,10 @@ abstract class Date
      */
     public static function timestampToDateTime($timestamp)
     {
+        if ($timestamp === null) {
+            return null;
+        }
+
         return DateTime::createFromFormat('U', $timestamp);
     }
 
