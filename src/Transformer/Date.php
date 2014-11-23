@@ -87,7 +87,7 @@ abstract class Date
     }
 
     /**
-     * Transform a DateTime to a 'yyyy-mm-dd' format string.
+     * Transform a DateTime to a 'hh:mm:ss' format string.
      *
      * @param DateTime $datetime DateTime object.
      *
