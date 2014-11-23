@@ -2,6 +2,8 @@
 
 namespace Zerifas\Supermodel;
 
+use PDO;
+
 abstract class AbstractModel
 {
     /**
@@ -42,7 +44,7 @@ abstract class AbstractModel
      *
      * @return AbstractModel
      */
-    public static function createFromArray(array $array, \PDO $db = null)
+    public static function createFromArray(array $array, PDO $db = null)
     {
         $instance = new static($db);
 
@@ -75,6 +77,30 @@ abstract class AbstractModel
     }
 
     /**
+     * Find all.
+     *
+     * @param PDO $db Database connection.
+     *
+     * @return Generator
+     */
+    public static function findAll(PDO $db)
+    {
+        $sql = sprintf(
+            'SELECT
+                *
+            FROM
+                `%s`',
+            static::getTableName()
+        );
+
+        $stmt = $db->query($sql);
+
+        while (($row = $stmt->fetch())) {
+            yield static::createFromArray($row, $db);
+        }
+    }
+
+    /**
      * Find by id, and return an initialised instance.
      *
      * @param PDO $db Database connection.
@@ -82,7 +108,7 @@ abstract class AbstractModel
      *
      * @return AbstractModel|false
      */
-    public static function findById(\PDO $db, $id)
+    public static function findById(PDO $db, $id)
     {
         $stmt = $db->prepare(sprintf(
             'SELECT
@@ -117,7 +143,7 @@ abstract class AbstractModel
         throw new \Exception('getTableName not overridden in ' . get_called_class());
     }
 
-    public function __construct(\PDO $db = null)
+    public function __construct(PDO $db = null)
     {
         $this->db = $db;
     }
@@ -183,11 +209,11 @@ abstract class AbstractModel
     /**
      * Save the model to storage.
      *
-     * @param \PDO $db Optional PDO instance.
+     * @param PDO $db Optional PDO instance.
      *
      * @return $this
      */
-    public function save(\PDO $db = null)
+    public function save(PDO $db = null)
     {
         if ($db === null) {
             $db = $this->db;
@@ -213,11 +239,11 @@ abstract class AbstractModel
     /**
      * Delete the model from storage.
      *
-     * @param \PDO $db Optional PDO instance.
+     * @param PDO $db Optional PDO instance.
      *
      * @return $this
      */
-    public function delete(\PDO $db = null)
+    public function delete(PDO $db = null)
     {
         if ($this->deleted) {
             return;
@@ -249,7 +275,7 @@ abstract class AbstractModel
         return $this;
     }
 
-    protected function create(\PDO $db)
+    protected function create(PDO $db)
     {
         $data = $this->toArray();
 
@@ -274,7 +300,7 @@ abstract class AbstractModel
         $this->setId($db->lastInsertId());
     }
 
-    protected function update(\PDO $db)
+    protected function update(PDO $db)
     {
         $data = $this->toArray();
 
