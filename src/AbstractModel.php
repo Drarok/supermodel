@@ -64,16 +64,37 @@ abstract class AbstractModel
                 $setter = 'set' . ucfirst($column);
             }
 
-            if (array_key_exists($column, $transformers)
-                && array_key_exists('fromArray', $transformers[$column])
-            ) {
-                $value = $transformers[$column]['fromArray']($value);
+            if ($transformer = static::getTransformer($column, 'fromArray')) {
+                $value = $transformer($value);
             }
 
             $instance->{$setter}($value);
         }
 
         return $instance;
+    }
+
+    protected static function getTransformer($column, $type)
+    {
+        if (! array_key_exists($column, static::$valueTransformers)) {
+            return;
+        }
+
+        if (! array_key_exists($type, static::$valueTransformers[$column])) {
+            return;
+        }
+
+        $transformer = static::$valueTransformers[$column][$type];
+
+        // Automatically add a namespace prefix if none supplied.
+        $prefix = 'Zerifas\\Supermodel\\Transformer\\';
+        if (is_array($transformer) && count($transformer) === 2 && is_string($transformer[0])) {
+            if (strpos($transformer[0], '\\') === false) {
+                $transformer[0] = $prefix . $transformer[0];
+            }
+        }
+
+        return $transformer;
     }
 
     /**
