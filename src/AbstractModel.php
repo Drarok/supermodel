@@ -7,10 +7,15 @@ use PDO;
 abstract class AbstractModel
 {
     /**
-     * Column -> property map keyed on column name.
+     * Array of column names as contained in the _table_. If you want to change
+     * the name used in the model, refer to the `columnMap` static property below.
      *
-     * Note: You currently *must* explicitly state all columns.
-     * Map them to false if the column name matches the property.
+     * @var array
+     */
+    protected static $columns = [];
+
+    /**
+     * Column -> property map keyed on column name.
      *
      * @var array
      */
@@ -48,23 +53,21 @@ abstract class AbstractModel
     {
         $instance = new static($db);
 
+        $columns = static::$columns;
         $map = static::$columnMap;
-        $transformers = static::$valueTransformers;
 
-        foreach ($array as $column => $value) {
-            // Ignore keys that don't exist in this model.
-            if (! array_key_exists($column, $map)) {
-                continue;
-            }
-
+        foreach ($columns as $column) {
             // Use the mapped name if set, else just use the column name.
-            if ($map[$column]) {
+            if (array_key_exists($column, $map)) {
                 $setter = 'set' . ucfirst($map[$column]);
             } else {
                 $setter = 'set' . ucfirst($column);
             }
 
-            if ($transformer = static::getTransformer($column, 'fromArray')) {
+            // Grab the value, and apply transform if one is set.
+            $value = array_key_exists($column, $array) ? $array[$column] : null;
+            if (array_key_exists($column, static::$valueTransformers)) {
+                $transformer = [static::$valueTransformers[$column], 'fromArray'];
                 $value = $transformer($value);
             }
 
@@ -72,29 +75,6 @@ abstract class AbstractModel
         }
 
         return $instance;
-    }
-
-    protected static function getTransformer($column, $type)
-    {
-        if (! array_key_exists($column, static::$valueTransformers)) {
-            return;
-        }
-
-        if (! array_key_exists($type, static::$valueTransformers[$column])) {
-            return;
-        }
-
-        $transformer = static::$valueTransformers[$column][$type];
-
-        // Automatically add a namespace prefix if none supplied.
-        $prefix = 'Zerifas\\Supermodel\\Transformer\\';
-        if (is_array($transformer) && count($transformer) === 2 && is_string($transformer[0])) {
-            if (strpos($transformer[0], '\\') === false) {
-                $transformer[0] = $prefix . $transformer[0];
-            }
-        }
-
-        return $transformer;
     }
 
     /**
@@ -198,12 +178,13 @@ abstract class AbstractModel
     {
         $data = [];
 
+        $columns = static::$columns;
         $map = static::$columnMap;
         $transformers = static::$valueTransformers;
 
-        foreach ($map as $column => $property) {
-            if ($property) {
-                $getter = 'get' . ucfirst($property);
+        foreach ($columns as $column) {
+            if (array_key_exists($column, $map)) {
+                $getter = 'get' . ucfirst($map[$column]);
             } else {
                 $getter = 'get' . ucfirst($column);
             }
@@ -215,10 +196,9 @@ abstract class AbstractModel
                 continue;
             }
 
-            if (array_key_exists($column, $transformers)
-                && array_key_exists('toArray', $transformers[$column])
-            ) {
-                $value = $transformers[$column]['toArray']($value);
+            if (array_key_exists($column, $transformers)) {
+                $transformer = [$transformers[$column], 'toArray'];
+                $value = $transformer($value);
             }
 
             $data[$column] = $value;
