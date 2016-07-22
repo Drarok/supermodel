@@ -2,7 +2,7 @@
 
 namespace Zerifas\Supermodel\Transformer;
 
-abstract class Boolean
+abstract class Boolean implements TransformerInterface
 {
     /**
      * Transform an integer to a bool.
@@ -11,13 +11,13 @@ abstract class Boolean
      *
      * @return bool
      */
-    public static function fromInteger($int)
+    public static function fromArray($value)
     {
-        if ($int === null) {
+        if ($value === null) {
             return null;
         }
 
-        return ($int !== 0);
+        return ($value !== 0);
     }
 
     /**
@@ -27,12 +27,12 @@ abstract class Boolean
      *
      * @return int
      */
-    public static function fromBoolean($bool = null)
+    public static function toArray($value)
     {
-        if ($bool === null) {
+        if ($value === null) {
             return null;
         }
 
-        return $bool ? 1 : 0;
+        return $value ? 1 : 0;
     }
 }

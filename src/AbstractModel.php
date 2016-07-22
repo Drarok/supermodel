@@ -7,10 +7,15 @@ use PDO;
 abstract class AbstractModel
 {
     /**
-     * Column -> property map keyed on column name.
+     * Array of column names as contained in the _table_. If you want to change
+     * the name used in the model, refer to the `columnMap` static property below.
      *
-     * Note: You currently *must* explicitly state all columns.
-     * Map them to false if the column name matches the property.
+     * @var array
+     */
+    protected static $columns = [];
+
+    /**
+     * Column -> property map keyed on column name.
      *
      * @var array
      */
@@ -38,6 +43,24 @@ abstract class AbstractModel
     protected $id;
 
     /**
+     * Get the columns as defined in static::$columns ready for use in a SQL statement.
+     *
+     * @param string $tableAlias Optional table alias such as 'u' when used for `SELECT … FROM users u`.
+     *
+     * @return array
+     */
+    public static function getColumns($tableAlias = null)
+    {
+        if ($tableAlias === null) {
+            $tableAlias = static::getTableName();
+        }
+
+        return array_map(function ($c) use ($tableAlias) {
+            return sprintf('%1$s.%2$s AS `%1$s:%2$s`', $tableAlias, $c);
+        }, static::$columns);
+    }
+
+    /**
      * Create an instance from an array of data, keyed by storage column name.
      *
      * @param array $array Array of data, keyed on column name.
@@ -48,26 +71,25 @@ abstract class AbstractModel
     {
         $instance = new static($db);
 
+        $columns = static::$columns;
         $map = static::$columnMap;
-        $transformers = static::$valueTransformers;
 
-        foreach ($array as $column => $value) {
-            // Ignore keys that don't exist in this model.
-            if (! array_key_exists($column, $map)) {
-                continue;
-            }
-
+        foreach ($columns as $column) {
             // Use the mapped name if set, else just use the column name.
-            if ($map[$column]) {
+            if (array_key_exists($column, $map)) {
                 $setter = 'set' . ucfirst($map[$column]);
             } else {
                 $setter = 'set' . ucfirst($column);
             }
 
-            if (array_key_exists($column, $transformers)
-                && array_key_exists('fromArray', $transformers[$column])
-            ) {
-                $value = $transformers[$column]['fromArray']($value);
+            // Get the value using the table name as a prefix.
+            $dataKey = static::getTableName() . ':' . $column;
+            $value = array_key_exists($dataKey, $array) ? $array[$dataKey] : null;
+
+            // Apply transform if one is set.
+            if (array_key_exists($column, static::$valueTransformers)) {
+                $transformer = [static::$valueTransformers[$column], 'fromArray'];
+                $value = $transformer($value);
             }
 
             $instance->{$setter}($value);
@@ -87,9 +109,10 @@ abstract class AbstractModel
     {
         $sql = sprintf(
             'SELECT
-                *
+                %s
             FROM
                 `%s`',
+            implode(', ', static::getColumns()),
             static::getTableName()
         );
 
@@ -112,13 +135,14 @@ abstract class AbstractModel
     {
         $stmt = $db->prepare(sprintf(
             'SELECT
-                *
+                %s
             FROM
                 `%s`
             WHERE
                 id = :id
             LIMIT
                 1',
+            implode(', ', static::getColumns()),
             static::getTableName()
         ));
 
@@ -138,7 +162,7 @@ abstract class AbstractModel
      *
      * @return string
      */
-    protected static function getTableName()
+    public static function getTableName()
     {
         throw new \Exception('getTableName not overridden in ' . get_called_class());
     }
@@ -177,12 +201,13 @@ abstract class AbstractModel
     {
         $data = [];
 
+        $columns = static::$columns;
         $map = static::$columnMap;
         $transformers = static::$valueTransformers;
 
-        foreach ($map as $column => $property) {
-            if ($property) {
-                $getter = 'get' . ucfirst($property);
+        foreach ($columns as $column) {
+            if (array_key_exists($column, $map)) {
+                $getter = 'get' . ucfirst($map[$column]);
             } else {
                 $getter = 'get' . ucfirst($column);
             }
@@ -194,10 +219,9 @@ abstract class AbstractModel
                 continue;
             }
 
-            if (array_key_exists($column, $transformers)
-                && array_key_exists('toArray', $transformers[$column])
-            ) {
-                $value = $transformers[$column]['toArray']($value);
+            if (array_key_exists($column, $transformers)) {
+                $transformer = [$transformers[$column], 'toArray'];
+                $value = $transformer($value);
             }
 
             $data[$column] = $value;
