@@ -43,6 +43,24 @@ abstract class AbstractModel
     protected $id;
 
     /**
+     * Get the columns as defined in static::$columns ready for use in a SQL statement.
+     *
+     * @param string $tableAlias Optional table alias such as 'u' when used for `SELECT … FROM users u`.
+     *
+     * @return array
+     */
+    public static function getColumns($tableAlias = null)
+    {
+        if ($tableAlias === null) {
+            $tableAlias = static::getTableName();
+        }
+
+        return array_map(function ($c) use ($tableAlias) {
+            return sprintf('%1$s.%2$s AS `%1$s:%2$s`', $tableAlias, $c);
+        }, static::$columns);
+    }
+
+    /**
      * Create an instance from an array of data, keyed by storage column name.
      *
      * @param array $array Array of data, keyed on column name.
@@ -64,8 +82,11 @@ abstract class AbstractModel
                 $setter = 'set' . ucfirst($column);
             }
 
-            // Grab the value, and apply transform if one is set.
-            $value = array_key_exists($column, $array) ? $array[$column] : null;
+            // Get the value using the table name as a prefix.
+            $dataKey = static::getTableName() . ':' . $column;
+            $value = array_key_exists($dataKey, $array) ? $array[$dataKey] : null;
+
+            // Apply transform if one is set.
             if (array_key_exists($column, static::$valueTransformers)) {
                 $transformer = [static::$valueTransformers[$column], 'fromArray'];
                 $value = $transformer($value);
@@ -88,9 +109,10 @@ abstract class AbstractModel
     {
         $sql = sprintf(
             'SELECT
-                *
+                %s
             FROM
                 `%s`',
+            implode(', ', static::getColumns()),
             static::getTableName()
         );
 
@@ -113,13 +135,14 @@ abstract class AbstractModel
     {
         $stmt = $db->prepare(sprintf(
             'SELECT
-                *
+                %s
             FROM
                 `%s`
             WHERE
                 id = :id
             LIMIT
                 1',
+            implode(', ', static::getColumns()),
             static::getTableName()
         ));
 
