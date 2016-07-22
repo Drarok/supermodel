@@ -63,11 +63,13 @@ abstract class AbstractModel
     /**
      * Create an instance from an array of data, keyed by storage column name.
      *
-     * @param array $array Array of data, keyed on column name.
+     * @param array  $array      Array of data, keyed on column name.
+     * @param PDO    $db         Database connection.
+     * @param string $tableAlias Table alias (prefix) used for keys in $array. Defaults to the table name.
      *
      * @return AbstractModel
      */
-    public static function createFromArray(array $array, PDO $db = null)
+    public static function createFromArray(array $array, PDO $db = null, $tableAlias = null)
     {
         $instance = new static($db);
 
@@ -83,7 +85,10 @@ abstract class AbstractModel
             }
 
             // Get the value using the table name as a prefix.
-            $dataKey = static::getTableName() . ':' . $column;
+            if ($tableAlias === null) {
+                $tableAlias = static::getTableName();
+            }
+            $dataKey = $tableAlias . ':' . $column;
             $value = array_key_exists($dataKey, $array) ? $array[$dataKey] : null;
 
             // Apply transform if one is set.
