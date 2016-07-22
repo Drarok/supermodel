@@ -159,7 +159,7 @@ abstract class AbstractModel
      *
      * @return string
      */
-    protected static function getTableName()
+    public static function getTableName()
     {
         throw new \Exception('getTableName not overridden in ' . get_called_class());
     }
