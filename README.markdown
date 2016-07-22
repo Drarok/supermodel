@@ -1,5 +1,7 @@
 # Supermodel
 
+Supermodel is a super-simple model library for PHP >= 5.5.
+
 ## Installation
 
     composer require zerifas/supermodel
