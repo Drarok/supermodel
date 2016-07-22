@@ -30,4 +30,15 @@ trait TimestampColumns
     {
         return $this->updatedAt;
     }
+
+    public function toArray()
+    {
+        if ($this->createdAt === null) {
+            $this->createdAt = new DateTime();
+        }
+
+        $this->updatedAt = new DateTime();
+
+        return parent::toArray();
+    }
 }
