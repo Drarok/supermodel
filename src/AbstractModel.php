@@ -43,34 +43,50 @@ abstract class AbstractModel
     protected $id;
 
     /**
-     * Get the columns as defined in static::$columns ready for use in a SQL statement.
-     *
-     * @param string $tableAlias Optional table alias such as 'u' when used for `SELECT … FROM users u`.
+     * Define the recommended options to pass to PDO.
      *
      * @return array
      */
-    public static function getColumns($tableAlias = null)
+    public static function getPDOOptions()
     {
-        if ($tableAlias === null) {
-            $tableAlias = static::getTableName();
-        }
+        return [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_STRINGIFY_FETCHES  => false,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ];
+    }
 
-        return array_map(function ($c) use ($tableAlias) {
-            return sprintf('%1$s.%2$s AS `%1$s:%2$s`', $tableAlias, $c);
+    /**
+     * Get the columns as defined in static::$columns ready for use in a SQL statement.
+     *
+     * @return array
+     */
+    public static function getColumns()
+    {
+        $tableName = static::getTableName();
+        return array_map(function ($c) use ($tableName) {
+            return sprintf('`%1$s`.`%2$s` AS `%1$s:%2$s`', $tableName, $c);
         }, static::$columns);
+    }
+
+    public static function getColumn($columnName)
+    {
+        return sprintf('`%s`.`%s`', static::getTableName(), $columnName);
     }
 
     /**
      * Create an instance from an array of data, keyed by storage column name.
      *
-     * @param array  $array      Array of data, keyed on column name.
-     * @param PDO    $db         Database connection.
-     * @param string $tableAlias Table alias (prefix) used for keys in $array. Defaults to the table name.
+     * @param array  $array Array of data, keyed on column name.
+     * @param PDO    $db    Database connection.
      *
      * @return AbstractModel
      */
-    public static function createFromArray(array $array, PDO $db = null, $tableAlias = null)
+    public static function createFromArray(array $array, PDO $db = null)
     {
+        $tableName = static::getTableName();
+
         $instance = new static($db);
 
         $columns = static::$columns;
@@ -85,10 +101,7 @@ abstract class AbstractModel
             }
 
             // Get the value using the table name as a prefix.
-            if ($tableAlias === null) {
-                $tableAlias = static::getTableName();
-            }
-            $dataKey = $tableAlias . ':' . $column;
+            $dataKey = $tableName . ':' . $column;
             $value = array_key_exists($dataKey, $array) ? $array[$dataKey] : null;
 
             // Apply transform if one is set.
@@ -112,16 +125,25 @@ abstract class AbstractModel
      */
     public static function findAll(PDO $db)
     {
-        $sql = sprintf(
-            'SELECT
-                %s
-            FROM
-                `%s`',
-            implode(', ', static::getColumns()),
-            static::getTableName()
-        );
+        return static::findBy($db);
+    }
 
-        $stmt = $db->query($sql);
+    /**
+     * Find multiple records using a simple WHERE clause.
+     *
+     * @param PDO   $db    Database connection.
+     * @param array $where Column => value map to search on.
+     *
+     * @return Generator
+     */
+    public static function findBy(PDO $db, array $where = [])
+    {
+        $stmt = (new QueryBuilder($db))
+            ->select(static::getColumns())
+            ->from(static::getTableName())
+            ->where($where)
+            ->execute()
+        ;
 
         while (($row = $stmt->fetch())) {
             yield static::createFromArray($row, $db);
@@ -138,22 +160,15 @@ abstract class AbstractModel
      */
     public static function findById(PDO $db, $id)
     {
-        $stmt = $db->prepare(sprintf(
-            'SELECT
-                %s
-            FROM
-                `%s`
-            WHERE
-                id = :id
-            LIMIT
-                1',
-            implode(', ', static::getColumns()),
-            static::getTableName()
-        ));
-
-        $stmt->execute([
-            'id' => $id,
-        ]);
+        $stmt = (new QueryBuilder($db))
+            ->select(static::getColumns())
+            ->from(static::getTableName())
+            ->where([
+                static::getColumn('id') => $id,
+            ])
+            ->limit(1)
+            ->execute()
+        ;
 
         if (($row = $stmt->fetch())) {
             return static::createFromArray($row, $db);
