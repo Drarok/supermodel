@@ -23,7 +23,8 @@ abstract class AbstractDate implements TransformerInterface
 
         if (! is_object($value) || ! ($value instanceof \DateTime)) {
             throw new \InvalidArgumentException(sprintf(
-                'Invalid value passed to %s::toArray', static::class
+                'Invalid value passed to %s::toArray',
+                static::class
             ));
         }
 

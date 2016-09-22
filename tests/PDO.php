@@ -6,7 +6,7 @@ class PDO extends \PDO
 {
     protected $statements = [];
 
-    public function prepare($statement, $options = NULL)
+    public function prepare($statement, $options = null)
     {
         $this->statements[] = $statement;
         return new PDOStatement();
