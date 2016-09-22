@@ -21,6 +21,12 @@ abstract class AbstractDate implements TransformerInterface
             return null;
         }
 
+        if (! is_object($value) || ! ($value instanceof \DateTime)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid value passed to %s::toArray', static::class
+            ));
+        }
+
         return $value->format(static::FORMAT_STRING);
     }
 }
