@@ -33,6 +33,6 @@ abstract class Boolean implements TransformerInterface
             return null;
         }
 
-        return $value ? 1 : 0;
+        return $value !== false ? 1 : 0;
     }
 }

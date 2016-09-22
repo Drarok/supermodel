@@ -298,7 +298,7 @@ abstract class AbstractModel
         }
 
         if ($db === null) {
-            throw new \Exception('Cannot save without a database connection.');
+            throw new \Exception('Cannot delete without a database connection.');
         }
 
         if ($this->getId() === null) {
@@ -307,7 +307,7 @@ abstract class AbstractModel
 
         $stmt = $db->prepare(
             sprintf(
-                'DELETE FROM `%s` WHERE id = :id',
+                'DELETE FROM `%1$s` WHERE `%1$s`.`id` = :id',
                 static::getTableName()
             )
         );
