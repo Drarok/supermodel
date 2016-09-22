@@ -2,6 +2,8 @@
 
 namespace Zerifas\Supermodel\Test;
 
+use Zerifas\Supermodel\QueryBuilder;
+
 class QueryBuilderTest extends AbstractTestCase
 {
     public function testSimple()
@@ -62,5 +64,34 @@ class QueryBuilderTest extends AbstractTestCase
 
         $statements = $this->db->getStatements();
         $this->assertEquals($expected, $statements[0]);
+    }
+
+    public function testWithClass()
+    {
+        $qb = new QueryBuilder($this->db, FakeModel::class);
+        $qb->where([
+            'id' => 1,
+        ]);
+        $qb->execute();
+
+        $expected = implode(' ', [
+            'SELECT `fake`.`id` AS `fake:id`, `fake`.`createdAt` AS `fake:createdAt`,',
+            '`fake`.`updatedAt` AS `fake:updatedAt`, `fake`.`enabled` AS `fake:enabled`',
+            'FROM `fake` WHERE `fake`.`id` = ?',
+        ]);
+
+        $stmts = $this->db->getStatements();
+        $actual = end($stmts);
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function testWithInvalidClass()
+    {
+        $this->setExpectedException(
+            'InvalidArgumentException',
+            'Zerifas\Supermodel\QueryBuilder only accepts a class name of a ' .
+            'subclass of Zerifas\Supermodel\AbstractModel as its second parameter'
+        );
+        $qb = new QueryBuilder($this->db, static::class);
     }
 }
