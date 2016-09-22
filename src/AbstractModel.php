@@ -138,9 +138,7 @@ abstract class AbstractModel
      */
     public static function findBy(PDO $db, array $where = [])
     {
-        $stmt = (new QueryBuilder($db))
-            ->select(static::getColumns())
-            ->from(static::getTableName())
+        $stmt = (new QueryBuilder($db, static::class))
             ->where($where)
             ->execute()
         ;
@@ -160,11 +158,9 @@ abstract class AbstractModel
      */
     public static function findById(PDO $db, $id)
     {
-        $stmt = (new QueryBuilder($db))
-            ->select(static::getColumns())
-            ->from(static::getTableName())
+        $stmt = (new QueryBuilder($db, static::class))
             ->where([
-                static::getColumn('id') => $id,
+                'id' => $id,
             ])
             ->limit(1)
             ->execute()
