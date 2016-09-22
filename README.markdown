@@ -21,7 +21,7 @@ class UserModel extends AbstractModel
 {
     // Automatically adds properties, getters, and setters for createdAt and updatedAt,
     // and automatically sets their values in the `toArray()` method.
-    use Zerifas\Supermodel\TimestampColumns;
+    use TimestampColumns;
 
     // Define all the columns that are in the table.
     protected static $columns = [
@@ -76,6 +76,85 @@ class UserModel extends AbstractModel
 }
 ```
 
+`src/model/PostModel.php`:
+```php
+<?php
+
+namespace YourApp\Model;
+
+use Zerifas\Supermodel\AbstractModel;
+use Zerifas\Supermodel\QueryBuider;
+use Zerifas\Supermodel\TimestampColumns;
+
+class PostModel extends AbstractModel
+{
+    use TimestampColumns;
+
+    protected static $columns = [
+        'id',
+        'createdAt',
+        'updatedAt',
+        'userId',
+        'title',
+        'body',
+    ];
+
+    protected $userId;
+    protected $title;
+    protected $body;
+    protected $user;
+
+    protected static $valueTransformers = [
+        'createdAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
+        'updatedAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
+    ];
+
+    public static function getTableName()
+    {
+        return 'posts';
+    }
+
+    /**
+     * Overridden findBy to automatically include the n:1 UserModel via SQL JOIN.
+     *
+     * @return Generator
+     */
+    public static function findBy(PDO $db, array $where = [])
+    {
+        $stmt = (new QueryBuilder($db))
+            ->select(static::getColumns())
+            ->addColumns(UserModel::getColumns())
+            ->from(static::getTableName())
+            ->join(UserModel::getTableName(), UserModel::getColumn('id'), static::getColumn('userId'))
+            ->where($where)
+            ->execute()
+        ;
+
+        while (($row = $stmt->fetch())) {
+            yield static::createFromArray($row, $db)
+                ->setUser(UserModel::createFromArray($row, $db))
+            ;
+        }
+    }
+
+    public function setUser(UserModel $user)
+    {
+        $this->user = $user;
+        $this->userId = $user->getId();
+        return $this;
+    }
+
+    public function getUser()
+    {
+        return $this->user;
+    }
+
+    /**
+     * Snip
+     */
+}
+```
+
 `examples.php`:
 ```php
 <?php
@@ -85,7 +164,8 @@ use YourApp\Model\UserModel;
 $db = new PDO(
     'mysql:host=localhost;dbname=test;charset=utf8',
     'root',
-    'P@55w0rd'
+    'P@55w0rd',
+    AbstractModel::getPDOOptions()
 );
 
 // Load all users from the database
@@ -101,4 +181,9 @@ $data = $user->toArray();
 $user = new UserModel($db);
 $user->setUsername('alice');
 $user->save();
+
+// Load all the posts (with their user)
+foreach (PostModel::findAll($db) as $post) {
+    echo $post->getId(), ': ', $post->getUser()->getUsername(), PHP_EOL;
+}
 ```
