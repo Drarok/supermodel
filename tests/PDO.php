@@ -12,6 +12,11 @@ class PDO extends \PDO
         return new PDOStatement();
     }
 
+    public function lastInsertId($seqname = null)
+    {
+        return 1;
+    }
+
     public function getStatements()
     {
         return $this->statements;
