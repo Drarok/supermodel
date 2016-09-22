@@ -14,6 +14,13 @@ class QueryBuilder
     protected $db;
 
     /**
+     * Class that this builder is operating on.
+     *
+     * @var string|null
+     */
+    protected $class;
+
+    /**
      * Columns that form the SELECT clause.
      *
      * @var array
@@ -51,11 +58,26 @@ class QueryBuilder
     /**
      * Constructor.
      *
-     * @param PDO $db Database connection.
+     * @param PDO    $db    Database connection.
+     * @param string $class Name of an AbstractModel subclass to use to resolve identifiers.
      */
-    public function __construct(PDO $db)
+    public function __construct(PDO $db, $class = null)
     {
         $this->db = $db;
+
+        if ($class !== null) {
+            if (!is_subclass_of($class, AbstractModel::class)) {
+                throw new \InvalidArgumentException(sprintf(
+                    '%s only accepts a class name of a subclass of %s as its second parameter',
+                    static::class,
+                    AbstractModel::class
+                ));
+            }
+
+            $this->class = $class;
+            $this->select($class::getColumns());
+            $this->from($class::getTableName());
+        }
     }
 
     /**
@@ -124,7 +146,23 @@ class QueryBuilder
      */
     public function where(array $clauses)
     {
+        if ($this->class) {
+            $class = $this->class;
+
+            $prefixed = [];
+            foreach ($clauses as $column => $value) {
+                if (strpos($column, '.') === false) {
+                    $column = $class::getColumn($column);
+                }
+
+                $prefixed[$column] = $value;
+            }
+
+            $clauses = $prefixed;
+        }
+
         $this->whereClauses = $clauses;
+
         return $this;
     }
 
@@ -148,9 +186,11 @@ class QueryBuilder
      */
     public function execute()
     {
-        $sql = 'SELECT ' . implode(', ', $this->columns);
-
-        $sql .= ' FROM ' . $this->tableName;
+        $sql = sprintf(
+            'SELECT %s FROM `%s`',
+            implode(', ', $this->columns),
+            $this->tableName
+        );
 
         foreach ($this->joins as $join) {
             $sql .= sprintf(

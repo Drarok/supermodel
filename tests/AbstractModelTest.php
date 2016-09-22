@@ -55,7 +55,7 @@ class AbstractModelTest extends AbstractTestCase
             'SELECT',
             '`fake`.`id` AS `fake:id`, `fake`.`createdAt` AS `fake:createdAt`,',
             '`fake`.`updatedAt` AS `fake:updatedAt`, `fake`.`enabled` AS `fake:enabled`',
-            'FROM fake',
+            'FROM `fake`',
         ]);
 
         $stmts = $this->db->getStatements();
@@ -71,7 +71,7 @@ class AbstractModelTest extends AbstractTestCase
             'SELECT',
             '`fake`.`id` AS `fake:id`, `fake`.`createdAt` AS `fake:createdAt`,',
             '`fake`.`updatedAt` AS `fake:updatedAt`, `fake`.`enabled` AS `fake:enabled`',
-            'FROM fake',
+            'FROM `fake`',
             'WHERE `fake`.`id` = ?',
             'LIMIT 1',
         ]);
@@ -94,7 +94,7 @@ class AbstractModelTest extends AbstractTestCase
             'SELECT',
             '`fake`.`id` AS `fake:id`, `fake`.`createdAt` AS `fake:createdAt`,',
             '`fake`.`updatedAt` AS `fake:updatedAt`, `fake`.`enabled` AS `fake:enabled`',
-            'FROM fake',
+            'FROM `fake`',
             'WHERE `fake`.`id` = ?',
             'LIMIT 1',
         ]);
