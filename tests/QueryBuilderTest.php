@@ -21,7 +21,7 @@ class QueryBuilderTest extends AbstractTestCase
         $expected = implode(' ', [
             'SELECT',
             'posts.id, posts.createdAt, posts.updatedAt, posts.title, posts.body',
-            'FROM posts',
+            'FROM `posts`',
         ]);
 
         $statements = $this->db->getStatements();
@@ -54,7 +54,7 @@ class QueryBuilderTest extends AbstractTestCase
             'SELECT',
             'posts.id, posts.createdAt, posts.updatedAt, posts.title, posts.body,',
             'user.id, user.username, user.password',
-            'FROM posts',
+            'FROM `posts`',
             'INNER JOIN users ON users.id = posts.userId',
             'WHERE posts.createdAt = ?',
             'LIMIT 10',

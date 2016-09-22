@@ -148,9 +148,11 @@ class QueryBuilder
      */
     public function execute()
     {
-        $sql = 'SELECT ' . implode(', ', $this->columns);
-
-        $sql .= ' FROM ' . $this->tableName;
+        $sql = sprintf(
+            'SELECT %s FROM `%s`',
+            implode(', ', $this->columns),
+            $this->tableName
+        );
 
         foreach ($this->joins as $join) {
             $sql .= sprintf(
