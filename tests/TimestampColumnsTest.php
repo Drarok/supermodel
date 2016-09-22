@@ -2,32 +2,6 @@
 
 namespace Zerifas\Supermodel\Test;
 
-use Zerifas\Supermodel\AbstractModel;
-use Zerifas\Supermodel\TimestampColumns;
-use Zerifas\Supermodel\Transformer\DateTime as DateTimeTransformer;
-
-
-class FakeModel extends AbstractModel
-{
-    use TimestampColumns;
-
-    protected static $columns = [
-        'id',
-        'createdAt',
-        'updatedAt',
-    ];
-
-    protected static $valueTransformers = [
-        'createdAt' => DateTimeTransformer::class,
-        'updatedAt' => DateTimeTransformer::class,
-    ];
-
-    public static function getTablename()
-    {
-        return 'fake';
-    }
-}
-
 class TimestampColumnsTest extends AbstractTestCase
 {
     public function testCreateFromArray()
@@ -36,6 +10,7 @@ class TimestampColumnsTest extends AbstractTestCase
             'fake:id'        => 1,
             'fake:createdAt' => '2016-01-01 20:00:00',
             'fake:updatedAt' => '2016-01-01 20:00:00',
+            'fake:enabled'   => 1,
         ]);
 
         $now = date('Y-m-d H:i:s');
@@ -43,6 +18,7 @@ class TimestampColumnsTest extends AbstractTestCase
             'id'        => 1,
             'createdAt' => '2016-01-01 20:00:00',
             'updatedAt' => $now,
+            'enabled'   => 1,
         ];
 
         $this->assertEquals($expected, $model->toArray());
@@ -56,6 +32,7 @@ class TimestampColumnsTest extends AbstractTestCase
         $expected = [
             'createdAt' => $now,
             'updatedAt' => $now,
+            'enabled'   => null,
         ];
 
         $this->assertEquals($expected, $model->toArray());
