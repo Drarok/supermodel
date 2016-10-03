@@ -25,4 +25,32 @@ class <?= ucfirst($table) ?>Model extends AbstractModel
 <?php endforeach; ?>
     ];
 <?php endif; ?>
+
+<?php foreach ($columns as $column): ?>
+<?php
+        if ($column->name === 'id'):
+            continue;
+        endif
+?>
+    protected $<?= $column->name ?>;
+<?php endforeach; ?>
+
+<?php foreach ($columns as $column): ?>
+<?php
+        if ($column->name === 'id'):
+            continue;
+        endif
+?>
+    protected function set<?= ucfirst($column->name) ?>($<?= $column->name ?>)
+    {
+        $this-><?= $column->name ?> = $<?= $column->name ?>;
+        return $this;
+    }
+
+    public function get<?= ucfirst($column->name) ?>()
+    {
+        return $this-><?= $column->name ?>;
+    }
+
+<?php endforeach; ?>
 }
