@@ -94,4 +94,39 @@ class QueryBuilderTest extends AbstractTestCase
         );
         $qb = new QueryBuilder($this->db, static::class);
     }
+
+    public function testJoinWithModel()
+    {
+        $qb = new QueryBuilder($this->db, FakeModel::class);
+        $qb->joinModel(FakePostModel::class, 'fakeId', 'id');
+        $qb->where([
+            'enabled' => 1,
+        ]);
+        $qb->execute();
+
+        $expected = implode(' ', [
+            'SELECT `fake`.`id` AS `fake:id`, `fake`.`createdAt` AS `fake:createdAt`,',
+            '`fake`.`updatedAt` AS `fake:updatedAt`, `fake`.`enabled` AS `fake:enabled`,',
+            '`fakePosts`.`id` AS `fakePosts:id`, `fakePosts`.`createdAt` AS `fakePosts:createdAt`,',
+            '`fakePosts`.`updatedAt` AS `fakePosts:updatedAt`, `fakePosts`.`fakeId` AS `fakePosts:fakeId`,',
+            '`fakePosts`.`title` AS `fakePosts:title`',
+            'FROM `fake` INNER JOIN `fakePosts` ON `fakePosts`.`fakeId` = `fake`.`id`',
+            'WHERE `fake`.`enabled` = ?'
+        ]);
+
+        $stmts = $this->db->getStatements();
+        $actual = end($stmts);
+        $this->assertEquals($expected, $actual);
+    }
+
+    public function testJoinWithModelException()
+    {
+        $this->setExpectedException(
+            'InvalidArgumentException',
+            'You must pass an explicit column name when not resolving via class.'
+        );
+
+        $qb = new QueryBuilder($this->db);
+        $qb->joinModel(FakePostModel::class, 'fakeId', 'id');
+    }
 }
