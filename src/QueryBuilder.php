@@ -228,7 +228,7 @@ class QueryBuilder
 
         foreach ($this->joins as $join) {
             $sql .= sprintf(
-                ' %s JOIN %s ON %s',
+                ' %s JOIN `%s` ON %s',
                 $join['type'],
                 $join['tableName'],
                 $join['clause']

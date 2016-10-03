@@ -57,7 +57,7 @@ class QueryBuilderTest extends AbstractTestCase
             'posts.id, posts.createdAt, posts.updatedAt, posts.title, posts.body,',
             'user.id, user.username, user.password',
             'FROM `posts`',
-            'INNER JOIN users ON users.id = posts.userId',
+            'INNER JOIN `users` ON users.id = posts.userId',
             'WHERE posts.createdAt = ?',
             'LIMIT 10',
         ]);
