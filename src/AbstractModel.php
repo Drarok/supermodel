@@ -92,8 +92,8 @@ abstract class AbstractModel
             $value = array_key_exists($dataKey, $array) ? $array[$dataKey] : null;
 
             // Apply transform if one is set.
-            if (array_key_exists($column, static::$valueTransformers)) {
-                $transformer = [static::$valueTransformers[$column], 'fromArray'];
+            if (array_key_exists($column, $this->valueTransformers)) {
+                $transformer = [$this->valueTransformers[$column], 'fromArray'];
                 $value = $transformer($value);
             }
 
@@ -172,9 +172,17 @@ abstract class AbstractModel
         throw new \Exception('getTableName not overridden in ' . get_called_class());
     }
 
+    protected static function getTransformers()
+    {
+        // The base implementation does nothing, but it allows subclasses and/or
+        // traits time time to set up transformers.
+        return [];
+    }
+
     public function __construct(PDO $db = null)
     {
         $this->db = $db;
+        $this->valueTransformers = static::getTransformers();
     }
 
     /**

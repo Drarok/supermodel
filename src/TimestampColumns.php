@@ -9,6 +9,13 @@ trait TimestampColumns
     protected $createdAt;
     protected $updatedAt;
 
+    protected static getTransformers()
+    {
+        $transformers = parent::getTransformers();
+
+        return $transformers;
+    }
+
     public function setCreatedAt(DateTime $value)
     {
         $this->createdAt = $value;
