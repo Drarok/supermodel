@@ -95,6 +95,33 @@ class QueryBuilderTest extends AbstractTestCase
         $qb = new QueryBuilder($this->db, static::class);
     }
 
+    /**
+     * @dataProvider getJoinTypes
+     */
+    public function testJoinTypes($joinType, $expected)
+    {
+        $qb = new QueryBuilder($this->db, FakeModel::class);
+        if ($joinType === null) {
+            $qb->joinModel(FakePostModel::class, 'fakeId', 'id');
+        } else {
+            $qb->joinModel(FakePostModel::class, 'fakeId', 'id', $joinType);
+        }
+        $qb->execute();
+
+        $stmts = $this->db->getStatements();
+        $actual = end($stmts);
+        $this->assertContains($expected, $actual);
+    }
+
+    public function getJoinTypes()
+    {
+        return [
+            [null, 'INNER JOIN `fakePosts` ON `fakePosts`.`fakeId` = `fake`.`id`'],
+            ['INNER', 'INNER JOIN `fakePosts` ON `fakePosts`.`fakeId` = `fake`.`id`'],
+            ['LEFT OUTER', 'LEFT OUTER JOIN `fakePosts` ON `fakePosts`.`fakeId` = `fake`.`id`'],
+        ];
+    }
+
     public function testJoinWithModel()
     {
         $qb = new QueryBuilder($this->db, FakeModel::class);
