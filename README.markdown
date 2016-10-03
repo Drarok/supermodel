@@ -16,6 +16,8 @@ namespace YourApp\Model;
 
 use Zerifas\Supermodel\AbstractModel;
 use Zerifas\Supermodel\TimestampColumns;
+use Zerifas\Supermodel\Transformer\Boolean as BooleanTransformer;
+use Zerifas\Supermodel\Transformer\DateTime as DateTimeTransformer;
 
 class UserModel extends AbstractModel
 {
@@ -29,23 +31,24 @@ class UserModel extends AbstractModel
         'createdAt',
         'updatedAt',
         'username',
-        'isActive',
+        'enabled',
     ];
 
     // You can map columns to different property names.
     protected static $columnMap = [
-        'isActive' => 'enabled',
+        'enabled' => 'active',
     ];
 
     // Transformers are keyed on column name, and are used to automatically convert database
     // values into scalars or objects in PHP, and vice versa.
     protected static $valueTransformers = [
-        'createdAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
-        'updatedAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
+        'createdAt' => DateTimeTransformer::class,
+        'updatedAt' => DateTimeTransformer::class,
+        'enabled'   => BooleanTransformer::class,
     ];
 
     protected $username;
-    protected $enabled;
+    protected $active;
 
     public static function getTableName()
     {
@@ -63,15 +66,20 @@ class UserModel extends AbstractModel
         return $this->username;
     }
 
-    public function setEnabled($enabled)
+    public function setActive($active)
     {
-        $this->enabled = $enabled;
+        $this->active = $active;
         return $this;
     }
 
-    public function getEnabled()
+    public function getActive()
     {
-        return $this->enabled;
+        return $this->active;
+    }
+
+    public function isActive()
+    {
+        return $this->active;
     }
 }
 ```
@@ -85,6 +93,7 @@ namespace YourApp\Model;
 use Zerifas\Supermodel\AbstractModel;
 use Zerifas\Supermodel\QueryBuider;
 use Zerifas\Supermodel\TimestampColumns;
+use Zerifas\Supermodel\Transformer\DateTime as DateTimeTransformer;
 
 class PostModel extends AbstractModel
 {
@@ -105,8 +114,8 @@ class PostModel extends AbstractModel
     protected $user;
 
     protected static $valueTransformers = [
-        'createdAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
-        'updatedAt' => 'Zerifas\\Supermodel\\Transformer\\DateTime',
+        'createdAt' => DateTimeTransformer::class,
+        'updatedAt' => DateTimeTransformer::class,
     ];
 
     public static function getTableName()
@@ -121,11 +130,8 @@ class PostModel extends AbstractModel
      */
     public static function findBy(PDO $db, array $where = [])
     {
-        $stmt = (new QueryBuilder($db))
-            ->select(static::getColumns())
-            ->addColumns(UserModel::getColumns())
-            ->from(static::getTableName())
-            ->join(UserModel::getTableName(), UserModel::getColumn('id'), static::getColumn('userId'))
+        $stmt = (new QueryBuilder($db, static::class))
+            ->joinModel(UserModel::class, 'id', 'userId')
             ->where($where)
             ->execute()
         ;
@@ -160,6 +166,7 @@ class PostModel extends AbstractModel
 <?php
 
 use YourApp\Model\UserModel;
+use YourApp\Model\PostModel;
 
 $db = new PDO(
     'mysql:host=localhost;dbname=test;charset=utf8',
