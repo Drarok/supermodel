@@ -1,0 +1,30 @@
+#!/usr/bin/env php
+<?php
+
+use Zerifas\Supermodel\Console\Application;
+
+// Work up from this file's directory, looking for composer's `vendor` directory.
+// This allows us to use the same script in development and within projects.
+$counter = 0;
+$projectRoot = __DIR__;
+while (true) {
+    $currentPath = realpath($projectRoot);
+
+    $vendorPath = $currentPath . '/vendor/autoload.php';
+
+    if (file_exists($vendorPath)) {
+        require_once $vendorPath;
+        $projectRoot = $currentPath;
+        break;
+    }
+    $projectRoot .= '/..';
+
+    if (++$counter > 10) {
+        throw new Exception('Failed to discover project root.');
+    }
+}
+
+define('SUPERMODEL_PROJECT_ROOT', $projectRoot);
+define('SUPERMODEL_TEMPLATES_ROOT', realpath(__DIR__ . '/../templates'));
+
+exit((new Application())->run());
