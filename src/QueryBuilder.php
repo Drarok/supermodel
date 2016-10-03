@@ -125,14 +125,16 @@ class QueryBuilder
      * @param string $joinTable   Name of the table to join.
      * @param string $joinColumn  Column in the joined table.
      * @param string $otherColumn Column to match against.
+     * @param string $type        Join type, defaults to 'INNER'.
      *
      * @return self
      */
-    public function join($joinTable, $joinColumn, $otherColumn)
+    public function join($joinTable, $joinColumn, $otherColumn, $type = 'INNER')
     {
         $this->joins[] = [
             'tableName' => $joinTable,
             'clause'    => sprintf('%s = %s', $joinColumn, $otherColumn),
+            'type'      => $type,
         ];
         return $this;
     }
@@ -194,7 +196,8 @@ class QueryBuilder
 
         foreach ($this->joins as $join) {
             $sql .= sprintf(
-                ' INNER JOIN %s ON %s',
+                ' %s JOIN %s ON %s',
+                $join['type'],
                 $join['tableName'],
                 $join['clause']
             );
