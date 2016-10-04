@@ -9,6 +9,10 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use Zerifas\Supermodel\Console\Config;
+use Zerifas\Supermodel\Console\Database\Column;
+use Zerifas\Supermodel\Console\Template;
+
 class GenerateCommand extends Command
 {
     protected function configure()
@@ -16,12 +20,14 @@ class GenerateCommand extends Command
         parent::configure();
         $this->setName('generate');
         $this->setDescription('Generate a model from a database table');
-        $this->addArgument('table', InputArgument::REQUIRED, 'Table name');
+        $this->addArgument('model_name', InputArgument::REQUIRED, 'Model name such as UserModel');
+        $this->addArgument('table', InputArgument::REQUIRED, 'Table name, for example users');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $db = $this->getDb();
+        $modelName = $input->getArgument('model_name');
         $table = $input->getArgument('table');
 
         $this->validateTable($db, $table);
@@ -30,40 +36,52 @@ class GenerateCommand extends Command
         $transformers = [];
         $transformerClasses = [];
         foreach ($columns as $column) {
-            $prefix = strtoupper(substr($column->type, 0, 4));
-            if ($prefix == 'DATE' || $prefix == 'TIME') {
-                if (strtoupper($column->type) === 'DATETIME') {
-                    $type = 'DateTime';
-                } else {
-                    $type = ucfirst(strtolower($column->type));
-                }
+            $columnType = $column->getType();
+            $prefix = substr($columnType, 0, 4);
 
-                $transformers[$column->name] = $type;
-                $transformerClasses[$type] = true;
+            if ($prefix == 'DATE' || $prefix == 'TIME') {
+                if ($columnType === 'DATETIME') {
+                    $transformerType = 'DateTime';
+                } else {
+                    $transformerType = ucfirst(strtolower($columnType));
+                }
+            } elseif ($columnType === 'TINYINT') {
+                $transformerType = 'Boolean';
+            } else {
+                continue;
             }
+
+            $transformers[$column->getName()] = $transformerType;
+            $transformerClasses[$transformerType] = true;
         }
+
+        $transformerClasses = array_keys($transformerClasses);
+        sort($transformerClasses);
+
+        $config = Config::get();
 
         $view = new Template('model');
         $view->set([
-            'namespace'          => 'YourApp\\Model',
+            'namespace'          => $config['models']['namespace'],
+            'modelName'          => $modelName,
             'table'              => $table,
-            'hasDate'            => true,
-            'columns'            => $columns,
+            'allColumns'         => $columns,
+            'columns'            => array_slice($columns, 1),
             'transformers'       => $transformers,
-            'transformerClasses' => array_keys($transformerClasses),
+            'transformerClasses' => $transformerClasses,
         ]);
         $view->render();
     }
 
     protected function getDb()
     {
-        $config = $this->getConfig();
+        $config = Config::get();
 
         $dsn = sprintf(
             'mysql:hostname=%s;dbname=%s;charset=%s',
-            $config['hostname'],
-            $config['dbname'],
-            empty($config['charset']) ? 'utf8' : $config['charset']
+            $config['db']['hostname'],
+            $config['db']['dbname'],
+            empty($config['db']['charset']) ? 'utf8' : $config['db']['charset']
         );
 
         $options = [
@@ -73,18 +91,7 @@ class GenerateCommand extends Command
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
 
-        return new PDO($dsn, $config['username'], $config['password'], $options);
-    }
-
-    protected function getConfig()
-    {
-        $configPath = SUPERMODEL_PROJECT_ROOT . '/supermodel.json';
-
-        if (! file_exists($configPath)) {
-            throw new \Exception('No such file: ' . $configPath);
-        }
-
-        return json_decode(file_get_contents($configPath), true);
+        return new PDO($dsn, $config['db']['username'], $config['db']['password'], $options);
     }
 
     protected function validateTable(PDO $db, $table)
@@ -105,31 +112,9 @@ class GenerateCommand extends Command
 
         $columns = [];
         while (($row = $stmt->fetch())) {
-            $columns[] = Column::parse($row);
+            $columns[] = new Column($row);
         }
 
         return $columns;
-    }
-}
-
-class Column
-{
-    public $name;
-    public $type;
-    public $null;
-
-    public static function parse($row)
-    {
-        if (! preg_match('/^(\w+)/', $row['Type'], $matches)) {
-            throw new \InvalidArgumentException('Failed to parse column type: ' . $type);
-        }
-
-        $instance = new static();
-
-        $instance->name = $row['Field'];
-        $instance->type = $matches[1];
-        $instance->null = $row['Null'] === 'YES';
-
-        return $instance;
     }
 }

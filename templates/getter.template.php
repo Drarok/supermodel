@@ -1,4 +1,4 @@
-    public function get<?= ucfirst($column->name) ?>()
+    public function get<?= ucfirst($column->getName()) ?>()
     {
-        return $this-><?= $column->name ?>;
+        return $this-><?= $column->getName() ?>;
     }

@@ -2,6 +2,8 @@
 <?php
 
 use Zerifas\Supermodel\Console\Application;
+use Zerifas\Supermodel\Console\Config;
+use Zerifas\Supermodel\Console\Template;
 
 // Work up from this file's directory, looking for composer's `vendor` directory.
 // This allows us to use the same script in development and within projects.
@@ -24,7 +26,7 @@ while (true) {
     }
 }
 
-define('SUPERMODEL_PROJECT_ROOT', $projectRoot);
-define('SUPERMODEL_TEMPLATES_ROOT', realpath(__DIR__ . '/../templates'));
+Config::setPath($projectRoot);
+Template::setPath(realpath(__DIR__ . '/../templates'));
 
 exit((new Application())->run());

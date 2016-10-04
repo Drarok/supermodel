@@ -24,7 +24,7 @@ class <?= $modelName ?> extends AbstractModel
     protected static $columns = [
 <?php
 foreach ($allColumns as $c) {
-    echo '        ', $c->name, ',', PHP_EOL;
+    echo sprintf('        \'%s\',', $c->getName()), PHP_EOL;
 }
 ?>
     ];
@@ -35,7 +35,7 @@ if (count($transformers) === 0) {
 } else {
     echo '    protected static $valueTransformers = [', PHP_EOL;
     foreach ($transformers as $column => $transformer) {
-        echo '        ', $column, ' => ', $transformer, 'Transformer::class,', PHP_EOL;
+        echo sprintf('        \'%s\' => %sTransformer::class,', $column, $transformer), PHP_EOL;
     }
 
     echo '    ];', PHP_EOL;
@@ -44,7 +44,7 @@ if (count($transformers) === 0) {
 echo PHP_EOL;
 
 foreach ($columns as $column) {
-    echo '    protected $', $column->name, ';', PHP_EOL;
+    echo sprintf('    protected $%s;', $column->getName()), PHP_EOL;
 }
 
 foreach ($columns as $column) {

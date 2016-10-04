@@ -1,5 +1,5 @@
-    protected function set<?= ucfirst($column->name) ?>($<?= $column->name ?>)
+    protected function set<?= ucfirst($column->getName()) ?>($<?= $column->getName() ?>)
     {
-        $this-><?= $column->name ?> = $<?= $column->name ?>;
+        $this-><?= $column->getName() ?> = $<?= $column->getName() ?>;
         return $this;
     }

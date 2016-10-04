@@ -4,8 +4,15 @@ namespace Zerifas\Supermodel\Console;
 
 class Template
 {
+    protected static $path = '';
+
     protected $name;
     protected $data = [];
+
+    public static function setPath($path)
+    {
+        static::$path = $path;
+    }
 
     public function __construct($name)
     {
@@ -27,6 +34,6 @@ class Template
             $this->set($data);
         }
         extract($this->data);
-        require SUPERMODEL_TEMPLATES_ROOT . '/' . $this->name . '.template.php';
+        require static::$path . '/' . $this->name . '.template.php';
     }
 }
