@@ -1,56 +1,58 @@
-<?= '<', '?php', PHP_EOL ?>
+<?php
+
+use Zerifas\Supermodel\Console\Template;
+
+$setter = new Template('setter');
+$getter = new Template('getter');
+
+echo '<', '?php', PHP_EOL;
+
+?>
 
 namespace <?= $namespace ?>;
 
 use Zerifas\Supermodel\AbstractModel;
 use Zerifas\Supermodel\QueryBuilder;
-<?php foreach ($transformerClasses as $transformer): ?>
-use Zerifas\Supermodel\Transformer\<?= $transformer ?> as <?= $transformer ?>Transformer;
-<?php endforeach; ?>
+<?php
+foreach ($transformerClasses as $transformer) {
+    echo sprintf('use Zerifas\Supermodel\Transformer\%1$s as %1$sTransformer;', $transformer), PHP_EOL;
+}
+?>
 
-class <?= ucfirst($table) ?>Model extends AbstractModel
+class <?= $modelName ?> extends AbstractModel
 {
     protected static $columns = [
-<?php foreach ($columns as $column): ?>
-        '<?= $column->name ?>',
-<?php endforeach; ?>
+<?php
+foreach ($allColumns as $c) {
+    echo '        ', $c->name, ',', PHP_EOL;
+}
+?>
     ];
 
-<?php if (count($transformers) === 0): ?>
-    protected static $valueTransformers = [];
-<?php else: ?>
-    protected static $valueTransformers = [
-<?php foreach ($transformers as $column => $transformer): ?>
-        '<?= $column ?>' => <?= $transformer ?>Transformer::class,
-<?php endforeach; ?>
-    ];
-<?php endif; ?>
-
-<?php foreach ($columns as $column): ?>
 <?php
-        if ($column->name === 'id'):
-            continue;
-        endif
-?>
-    protected $<?= $column->name ?>;
-<?php endforeach; ?>
-
-<?php foreach ($columns as $column): ?>
-<?php
-        if ($column->name === 'id'):
-            continue;
-        endif
-?>
-    protected function set<?= ucfirst($column->name) ?>($<?= $column->name ?>)
-    {
-        $this-><?= $column->name ?> = $<?= $column->name ?>;
-        return $this;
+if (count($transformers) === 0) {
+    echo '    protected static $valueTransformers = [];', PHP_EOL;
+} else {
+    echo '    protected static $valueTransformers = [', PHP_EOL;
+    foreach ($transformers as $column => $transformer) {
+        echo '        ', $column, ' => ', $transformer, 'Transformer::class,', PHP_EOL;
     }
 
-    public function get<?= ucfirst($column->name) ?>()
-    {
-        return $this-><?= $column->name ?>;
-    }
+    echo '    ];', PHP_EOL;
+}
 
-<?php endforeach; ?>
+echo PHP_EOL;
+
+foreach ($columns as $column) {
+    echo '    protected $', $column->name, ';', PHP_EOL;
+}
+
+foreach ($columns as $column) {
+    echo PHP_EOL;
+    $setter->render(['column' => $column]);
+
+    echo PHP_EOL;
+    $getter->render(['column' => $column]);
+}
+?>
 }
