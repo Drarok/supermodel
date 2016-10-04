@@ -14,6 +14,10 @@ namespace <?= $namespace ?>;
 use Zerifas\Supermodel\AbstractModel;
 use Zerifas\Supermodel\QueryBuilder;
 <?php
+if ($timestamps) {
+    echo 'use Zerifas\\Supermodel\\TimestampColumns;', PHP_EOL;
+}
+
 foreach ($transformerClasses as $transformer) {
     echo sprintf('use Zerifas\Supermodel\Transformer\%1$s as %1$sTransformer;', $transformer), PHP_EOL;
 }
@@ -21,9 +25,14 @@ foreach ($transformerClasses as $transformer) {
 
 class <?= $modelName ?> extends AbstractModel
 {
+<?php
+if ($timestamps) {
+    echo '    use TimestampColumns;', PHP_EOL, PHP_EOL;
+}
+?>
     protected static $columns = [
 <?php
-foreach ($allColumns as $c) {
+foreach ($columns as $c) {
     echo sprintf('        \'%s\',', $c->getName()), PHP_EOL;
 }
 ?>
@@ -43,11 +52,11 @@ if (count($transformers) === 0) {
 
 echo PHP_EOL;
 
-foreach ($columns as $column) {
+foreach ($properties as $column) {
     echo sprintf('    protected $%s;', $column->getName()), PHP_EOL;
 }
 
-foreach ($columns as $column) {
+foreach ($properties as $column) {
     echo PHP_EOL;
     $setter->render(['column' => $column]);
 
