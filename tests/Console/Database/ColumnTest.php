@@ -11,7 +11,7 @@ class ColumnTest extends PHPUnit_Framework_TestCase
     /**
      * @dataProvider dataProviderTypes
      */
-    public function testTypes($type, $expectedType, $expectedUnsigned)
+    public function testTypes($type, $expectedType, $expectedLimit, $expectedUnsigned)
     {
         $column = new Column([
             'Field' => 'fakename',
@@ -21,22 +21,28 @@ class ColumnTest extends PHPUnit_Framework_TestCase
 
         $this->assertEquals('fakename', $column->getName());
         $this->assertEquals($expectedType, $column->getType());
-        $this->assertEquals($expectedUnsigned, $column->isUnsigned());
+        $this->assertSame($expectedLimit, $column->getLimit());
+        $this->assertSame($expectedUnsigned, $column->isUnsigned());
     }
 
 
     public function dataProviderTypes()
     {
         return [
-            ['int(11)', 'INT', false],
-            ['int(11) unsigned', 'INT', true],
-            ['datetime', 'DATETIME', false],
-            ['date', 'DATE', false],
-            ['time', 'TIME', false],
-            ['text', 'TEXT', false],
-            ['varchar(32)', 'VARCHAR', false],
-            ['tinyint(3)', 'TINYINT', false],
-            ['tinyint(3) unsigned', 'TINYINT', true],
+            ['int(11)', 'INT', 11, false],
+            ['int(11) unsigned', 'INT', 11, true],
+            ['datetime', 'DATETIME', null, false],
+            ['date', 'DATE', null, false],
+            ['time', 'TIME', null, false],
+            ['text', 'TEXT', null, false],
+            ['varchar(32)', 'VARCHAR', 32, false],
+            ['tinyint(3)', 'TINYINT', 3, false],
+            ['tinyint(3) unsigned', 'TINYINT', 3, true],
+            ['bit(1)', 'BIT', 1, false],
+            ['float(8,2)', 'FLOAT', '8,2', false],
+            ['float(8,2) unsigned', 'FLOAT', '8,2', true],
+            ['decimal(8,2)', 'DECIMAL', '8,2', false],
+            ['decimal(8,2) unsigned', 'DECIMAL', '8,2', true],
         ];
     }
 
@@ -47,10 +53,12 @@ class ColumnTest extends PHPUnit_Framework_TestCase
     {
         $column = new Column([
             'Field' => 'fakename',
-            'Type' => 'varchar',
+            'Type' => 'varchar(32)',
             'Null' => $null,
         ]);
 
+        $this->assertEquals('VARCHAR', $column->getType());
+        $this->assertSame(32, $column->getLimit());
         $this->assertEquals($expectedNull, $column->isNull());
     }
 
