@@ -8,6 +8,25 @@ Supermodel is a super-simple model library for PHP >= 5.5.
 
 ## Usage
 
+### Model Generation
+
+The easiest way to start creating your models is to use the built-in model generation tool:
+
+```bash
+$ edit supermodel.json # see example supermodel.sample.json
+$ vendor/bin/supermodel generate UserModel users > src/YourApp/Model/UserModel.php
+```
+
+All `date`, `time`, and `datetime` columns are automatically transformed, to `DateTime` objects and `bit(1)` columns are treated transformed to booleans. You can optionally transform `tinyint unsigned not null` columns as booleans:
+
+```bash
+$ vendor/bin/supermodel generate UserModel users --tinyint-bool > src/YourApp/Model/UserModel.php
+```
+
+### Manual Process
+
+Here are some examples, demonstrating various ways you can use Supermodel.
+
 `src/model/UserModel.php`:
 ```php
 <?php
