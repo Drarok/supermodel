@@ -125,16 +125,50 @@ class QueryBuilder
      * @param string $joinTable   Name of the table to join.
      * @param string $joinColumn  Column in the joined table.
      * @param string $otherColumn Column to match against.
+     * @param string $type        Join type, defaults to 'INNER'.
      *
      * @return self
      */
-    public function join($joinTable, $joinColumn, $otherColumn)
+    public function join($joinTable, $joinColumn, $otherColumn, $type = 'INNER')
     {
         $this->joins[] = [
             'tableName' => $joinTable,
             'clause'    => sprintf('%s = %s', $joinColumn, $otherColumn),
+            'type'      => $type,
         ];
         return $this;
+    }
+
+    /**
+     * Add a table to be joined, using its model to obtain metadata.
+     *
+     * @param string $joinClass   Name of the class to use for metadata.
+     * @param string $joinColumn  Name of the column in the joined table.
+     * @param string $otherColumn Name of the column to join to.
+     * @param string $type        Join type, defaults to 'INNER'.
+     *
+     * @return self
+     */
+    public function joinModel($joinClass, $joinColumn, $otherColumn, $type = 'INNER')
+    {
+        if (strpos($joinColumn, '.') === false) {
+            $joinColumn = $joinClass::getColumn($joinColumn);
+        }
+
+        if (strpos($otherColumn, '.') === false) {
+            if (! $this->class) {
+                throw new \InvalidArgumentException(
+                    'You must pass an explicit column name when not resolving via class.'
+                );
+            }
+
+            $otherClass = $this->class; // Workaround for PHP < 7.0
+            $otherColumn = $otherClass::getColumn($otherColumn);
+        }
+
+        $this->addColumns($joinClass::getColumns());
+
+        return $this->join($joinClass::getTableName(), $joinColumn, $otherColumn, $type);
     }
 
     /**
@@ -194,7 +228,8 @@ class QueryBuilder
 
         foreach ($this->joins as $join) {
             $sql .= sprintf(
-                ' INNER JOIN %s ON %s',
+                ' %s JOIN `%s` ON %s',
+                $join['type'],
                 $join['tableName'],
                 $join['clause']
             );

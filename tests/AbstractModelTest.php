@@ -196,7 +196,10 @@ class AbstractModelTest extends AbstractTestCase
 
         $model->save();
 
-        $expected = 'UPDATE `fake` SET `createdAt` = :createdAt, `updatedAt` = :updatedAt, `enabled` = :enabled WHERE id = :id LIMIT 1';
+        $expected = implode(' ', [
+            'UPDATE `fake` SET `createdAt` = :createdAt, `updatedAt` = :updatedAt, `enabled` = :enabled',
+            'WHERE id = :id LIMIT 1',
+        ]);
         $stmts = $this->db->getStatements();
         $actual = preg_replace('/\s+/', ' ', end($stmts));
 

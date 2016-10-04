@@ -7,6 +7,11 @@ use PDO;
 abstract class AbstractModel
 {
     /**
+     * Version of Supermodel.
+     */
+    const VERSION = '1.2.0';
+
+    /**
      * Array of column names as contained in the _table_. If you want to change
      * the name used in the model, refer to the `columnMap` static property below.
      *
@@ -138,9 +143,7 @@ abstract class AbstractModel
      */
     public static function findBy(PDO $db, array $where = [])
     {
-        $stmt = (new QueryBuilder($db))
-            ->select(static::getColumns())
-            ->from(static::getTableName())
+        $stmt = (new QueryBuilder($db, static::class))
             ->where($where)
             ->execute()
         ;
@@ -160,11 +163,9 @@ abstract class AbstractModel
      */
     public static function findById(PDO $db, $id)
     {
-        $stmt = (new QueryBuilder($db))
-            ->select(static::getColumns())
-            ->from(static::getTableName())
+        $stmt = (new QueryBuilder($db, static::class))
             ->where([
-                static::getColumn('id') => $id,
+                'id' => $id,
             ])
             ->limit(1)
             ->execute()

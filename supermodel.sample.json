@@ -1,0 +1,12 @@
+{
+  "db": {
+    "hostname": "localhost",
+    "username": "root",
+    "password": "",
+    "dbname": "test",
+    "charset": "utf8"
+  },
+  "models": {
+    "namespace": "YourApp\\Model"
+  }
+}
