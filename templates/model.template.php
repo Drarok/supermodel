@@ -56,6 +56,14 @@ foreach ($properties as $column) {
     echo sprintf('    protected $%s;', $column->getName()), PHP_EOL;
 }
 
+?>
+
+    public static function getTableName()
+    {
+        return '<?= $table ?>';
+    }
+<?php
+
 foreach ($properties as $column) {
     echo PHP_EOL;
     $setter->render(['column' => $column]);
