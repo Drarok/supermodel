@@ -19,6 +19,7 @@ class GenerateCommand extends Command
     const ARG_MODEL_NAME = 'model_name';
     const ARG_TABLE = 'table';
     const OPT_TINYINT_BOOL = 'tinyint-bool';
+    const OPT_TIMESTAMPS = 'timestamps';
 
     protected function configure()
     {
@@ -35,6 +36,12 @@ class GenerateCommand extends Command
             InputOption::VALUE_NONE,
             'Infer columns of type TINYINT UNSIGNED NOT NULL to be boolean'
         );
+        $this->addOption(
+            self::OPT_TIMESTAMPS,
+            'i',
+            InputOption::VALUE_NONE,
+            'Use TimestampColumns trait for createdAt and updatedAt'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -43,6 +50,7 @@ class GenerateCommand extends Command
         $modelName = $input->getArgument(self::ARG_MODEL_NAME);
         $table = $input->getArgument(self::ARG_TABLE);
         $inferBool = $input->getOption(self::OPT_TINYINT_BOOL);
+        $timestamps = $input->getOption(self::OPT_TIMESTAMPS);
 
         $this->validateTable($db, $table);
         $columns = $this->getColumns($db, $table);
@@ -74,6 +82,25 @@ class GenerateCommand extends Command
         $transformerClasses = array_keys($transformerClasses);
         sort($transformerClasses);
 
+        $properties = array_filter($columns, function ($c) use ($timestamps) {
+            $name = $c->getName();
+
+            // Name is handled in AbstractModel.
+            if ($name === 'id') {
+                return false;
+            }
+
+            // If the user opted in to timestamps, filter out relevant DATETIME columns.
+            if ($timestamps) {
+                if ($c->getType() === 'DATETIME' && ($name === 'createdAt' || $name === 'updatedAt')) {
+                    return false;
+                }
+            }
+
+            // Otherwise, include this column in the list of properties.
+            return true;
+        });
+
         $config = Config::get();
 
         $template = new Template('model');
@@ -81,8 +108,9 @@ class GenerateCommand extends Command
             'namespace'          => $config['models']['namespace'],
             'modelName'          => $modelName,
             'table'              => $table,
-            'allColumns'         => $columns,
-            'columns'            => array_slice($columns, 1),
+            'columns'            => $columns,
+            'properties'         => $properties,
+            'timestamps'         => $timestamps,
             'transformers'       => $transformers,
             'transformerClasses' => $transformerClasses,
         ]);
