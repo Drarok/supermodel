@@ -93,12 +93,21 @@ class GenerateCommand extends Command
     {
         $config = Config::get();
 
-        $dsn = sprintf(
-            'mysql:hostname=%s;dbname=%s;charset=%s',
-            $config['db']['hostname'],
-            $config['db']['dbname'],
-            empty($config['db']['charset']) ? 'utf8' : $config['db']['charset']
-        );
+        $dsnDefaults = [
+            'host'    => 'localhost',
+            'dbname'  => null,
+            'charset' => 'utf8',
+        ];
+        $db = array_merge($dsnDefaults, $config['db']);
+
+        $dsn = 'mysql:';
+        foreach ($db as $key => $value) {
+            if ($key === 'username' || $key === 'password' || empty($value)) {
+                continue;
+            }
+
+            $dsn .= sprintf('%s=%s;', $key, $value);
+        }
 
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -107,7 +116,7 @@ class GenerateCommand extends Command
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
 
-        return new PDO($dsn, $config['db']['username'], $config['db']['password'], $options);
+        return new PDO($dsn, $db['username'], $db['password'], $options);
     }
 
     protected function validateTable(PDO $db, $table)
