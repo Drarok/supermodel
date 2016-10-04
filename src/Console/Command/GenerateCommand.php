@@ -7,6 +7,7 @@ use PDO;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 use Zerifas\Supermodel\Console\Config;
@@ -15,20 +16,33 @@ use Zerifas\Supermodel\Console\Template;
 
 class GenerateCommand extends Command
 {
+    const ARG_MODEL_NAME = 'model_name';
+    const ARG_TABLE = 'table';
+    const OPT_TINYINT_BOOL = 'tinyint-bool';
+
     protected function configure()
     {
         parent::configure();
+
         $this->setName('generate');
         $this->setDescription('Generate a model from a database table');
-        $this->addArgument('model_name', InputArgument::REQUIRED, 'Model name such as UserModel');
-        $this->addArgument('table', InputArgument::REQUIRED, 'Table name, for example users');
+
+        $this->addArgument(self::ARG_MODEL_NAME, InputArgument::REQUIRED, 'Model name such as UserModel');
+        $this->addArgument(self::ARG_TABLE, InputArgument::REQUIRED, 'Table name, for example users');
+        $this->addOption(
+            self::OPT_TINYINT_BOOL,
+            't',
+            InputOption::VALUE_NONE,
+            'Infer columns of type TINYINT UNSIGNED NOT NULL to be boolean'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $db = $this->getDb();
-        $modelName = $input->getArgument('model_name');
-        $table = $input->getArgument('table');
+        $modelName = $input->getArgument(self::ARG_MODEL_NAME);
+        $table = $input->getArgument(self::ARG_TABLE);
+        $inferBool = $input->getOption(self::OPT_TINYINT_BOOL);
 
         $this->validateTable($db, $table);
         $columns = $this->getColumns($db, $table);
@@ -45,7 +59,9 @@ class GenerateCommand extends Command
                 } else {
                     $transformerType = ucfirst(strtolower($columnType));
                 }
-            } elseif ($columnType === 'TINYINT') {
+            } elseif ($inferBool && $columnType === 'TINYINT' && $column->isUnsigned() && ! $column->isNull()) {
+                $transformerType = 'Boolean';
+            } elseif ($columnType === 'BIT' && $column->getLimit() === 1) {
                 $transformerType = 'Boolean';
             } else {
                 continue;
@@ -60,8 +76,8 @@ class GenerateCommand extends Command
 
         $config = Config::get();
 
-        $view = new Template('model');
-        $view->set([
+        $template = new Template('model');
+        $template->set([
             'namespace'          => $config['models']['namespace'],
             'modelName'          => $modelName,
             'table'              => $table,
@@ -70,7 +86,7 @@ class GenerateCommand extends Command
             'transformers'       => $transformers,
             'transformerClasses' => $transformerClasses,
         ]);
-        $view->render();
+        $template->render();
     }
 
     protected function getDb()
