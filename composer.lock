@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "128596075c9eeb351a9dd7dd22719ef3",
-    "content-hash": "13ab4f8396ddb6d53205210578dbe375",
+    "hash": "80d221656b4abde5e8457b197f99fee0",
+    "content-hash": "1585736d951bb3c5d3b3bc39dc909141",
     "packages": [
         {
             "name": "psr/log",
@@ -230,6 +230,43 @@
                 "shim"
             ],
             "time": "2016-05-18 14:26:46"
+        },
+        {
+            "name": "zerifas/json",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Drarok/json.git",
+                "reference": "aee7a448000b879f2ea8cdca652d8c7de97a3558"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Drarok/json/zipball/aee7a448000b879f2ea8cdca652d8c7de97a3558",
+                "reference": "aee7a448000b879f2ea8cdca652d8c7de97a3558",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.5"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.27",
+                "squizlabs/php_codesniffer": "^2.7"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Zerifas\\JSON\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "Mat Gadd",
+                    "email": "mat@zerifas.com"
+                }
+            ],
+            "description": "Define a schema for your JSON documents, and validate them",
+            "time": "2016-10-06 10:03:24"
         }
     ],
     "packages-dev": [
