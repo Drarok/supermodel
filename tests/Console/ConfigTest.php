@@ -9,29 +9,32 @@ class ConfigTest extends PHPUnit_Framework_TestCase
 {
     const TEST_CONFIG_PATHNAME = '/tmp/supermodel.json';
 
-    protected static $config;
-
-    public static function setUpBeforeClass()
+    private static function createValidConfig()
     {
-        static::$config = [
-            'db' => [
-                'hostname' => 'localhost',
+        $config = [
+            'db'     => [
+                'host'     => 'localhost',
                 'username' => 'root',
                 'password' => '',
-                'dbname' => 'test',
-                'charset' => 'utf8'
+                'dbname'   => 'test',
+                'charset'  => 'utf8',
             ],
             'models' => [
                 'namespace' => 'YourApp\\Model'
             ]
         ];
 
-        file_put_contents(self::TEST_CONFIG_PATHNAME, json_encode(static::$config));
+        file_put_contents(self::TEST_CONFIG_PATHNAME, json_encode($config));
+
+        return (object) [
+            'db'     => (object) $config['db'],
+            'models' => (object) $config['models'],
+        ];
     }
 
-    public static function tearDownAfterClass()
+    private static function createInvalidConfig()
     {
-        unlink(self::TEST_CONFIG_PATHNAME);
+        file_put_contents(self::TEST_CONFIG_PATHNAME, json_encode([]));
     }
 
     public function setUp()
@@ -40,9 +43,28 @@ class ConfigTest extends PHPUnit_Framework_TestCase
         Config::setPath('/tmp');
     }
 
-    public function testSomething()
+    public function tearDown()
     {
-        $this->assertEquals(static::$config, Config::get());
+        if (file_exists(self::TEST_CONFIG_PATHNAME)) {
+            unlink(self::TEST_CONFIG_PATHNAME);
+        }
+        parent::tearDown();
+    }
+
+    public function testValidConfig()
+    {
+        $config = static::createValidConfig();
+        $this->assertEquals($config, Config::get());
+    }
+
+    public function testInvalidConfig()
+    {
+        $this->setExpectedException(
+            'Exception',
+            'Invalid config: Key path \'db\' is required, but missing. Key path \'models\' is required, but missing.'
+        );
+        static::createInvalidConfig();
+        Config::get();
     }
 
     public function testNoSuchFile()
