@@ -2,6 +2,8 @@
 
 namespace Zerifas\Supermodel\Console;
 
+use Zerifas\JSON;
+
 abstract class Config
 {
     protected static $path = '';
@@ -22,9 +24,32 @@ abstract class Config
                 throw new \Exception('No such file: ' . $configPath);
             }
 
-            static::$config = json_decode(file_get_contents($configPath), true);
+            $validator = static::getConfigValidator();
+            if (! $validator->isValid(file_get_contents($configPath))) {
+                throw new \Exception('Invalid config: ' . implode(' ', $validator->getErrors()));
+            }
+
+            static::$config = $validator->getDocument();
         }
 
         return static::$config;
+    }
+
+    protected static function getConfigValidator()
+    {
+        $schema = new JSON\Object([
+            'db'     => new JSON\Object([
+                'host'     => new JSON\Str(),
+                'dbname'   => new JSON\Str(),
+                'charset'  => new JSON\OptionalStr('utf8'),
+                'username' => new JSON\Str(),
+                'password' => new JSON\Str(),
+            ]),
+            'models' => new JSON\Object([
+                'namespace' => new JSON\Str(),
+            ]),
+        ]);
+
+        return new JSON\Validator($schema);
     }
 }
