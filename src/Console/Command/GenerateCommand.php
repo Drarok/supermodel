@@ -105,7 +105,7 @@ class GenerateCommand extends Command
 
         $template = new Template('model');
         $template->set([
-            'namespace'          => $config['models']['namespace'],
+            'namespace'          => $config->models->namespace,
             'modelName'          => $modelName,
             'table'              => $table,
             'columns'            => $columns,
@@ -119,18 +119,11 @@ class GenerateCommand extends Command
 
     protected function getDb()
     {
-        $config = Config::get();
-
-        $dsnDefaults = [
-            'host'    => 'localhost',
-            'dbname'  => null,
-            'charset' => 'utf8',
-        ];
-        $db = array_merge($dsnDefaults, $config['db']);
+        $db = Config::get()->db;
 
         $dsn = 'mysql:';
         foreach ($db as $key => $value) {
-            if ($key === 'username' || $key === 'password' || empty($value)) {
+            if ($key === 'username' || $key === 'password') {
                 continue;
             }
 
@@ -144,7 +137,7 @@ class GenerateCommand extends Command
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
 
-        return new PDO($dsn, $db['username'], $db['password'], $options);
+        return new PDO($dsn, $db->username, $db->password, $options);
     }
 
     protected function validateTable(PDO $db, $table)
