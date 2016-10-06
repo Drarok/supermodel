@@ -9,7 +9,7 @@ abstract class AbstractModel
     /**
      * Version of Supermodel.
      */
-    const VERSION = '1.2.2';
+    const VERSION = '1.3.0';
 
     /**
      * Array of column names as contained in the _table_. If you want to change
