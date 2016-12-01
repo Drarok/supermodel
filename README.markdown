@@ -1,5 +1,16 @@
 # Supermodel [![Build Status](https://travis-ci.org/Drarok/supermodel.svg?branch=v2)](https://travis-ci.org/Drarok/supermodel)
 
+Supermodel is a super-simple model library for PHP >= 7.0.
+
+## Installation
+
+```
+composer require 'zerifas/supermodel:v2.x-dev'
+```
+
+## Usage
+
+`…/PostModel.php`:
 ```php
 <?php
 
@@ -40,6 +51,7 @@ class PostModel extends Model
 }
 ```
 
+`…/UserModel.php`:
 ```php
 <?php
 
@@ -75,6 +87,7 @@ class UserModel extends Model
 }
 ```
 
+`examples.php`:
 ```php
 <?php
 
@@ -88,7 +101,7 @@ $post = $conn->find(PostModel::class)
     ->join('user')
     ->where([
         PostModel::greaterThan('id', 10),
-        PostModel::equal('user.id', 22)
+        PostModel::equal('user.id', 22),
     ])
     ->getOne()
 ;
