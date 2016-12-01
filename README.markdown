@@ -1,4 +1,4 @@
-# Supermodel
+# Supermodel [![Build Status](https://travis-ci.org/Drarok/supermodel.svg?branch=v2)](https://travis-ci.org/Drarok/supermodel)
 
 ```php
 <?php
