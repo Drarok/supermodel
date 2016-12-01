@@ -103,7 +103,7 @@ $post = $conn->find(PostModel::class)
         PostModel::greaterThan('id', 10),
         PostModel::equal('user.id', 22),
     ])
-    ->getOne()
+    ->fetchOne()
 ;
 
 $post->getId();

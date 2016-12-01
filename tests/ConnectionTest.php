@@ -62,7 +62,7 @@ class ConnectionTest extends TestCase
         // This object won't contain any data because the SQLite driver doesn't support PDO::ATTR_FETCH_TABLE_NAMES
         $post = $this->conn->find(PostModel::class)
             ->byId(1)
-            ->getOne()
+            ->fetchOne()
         ;
 
         $this->assertNotFalse($post);

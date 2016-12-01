@@ -53,7 +53,7 @@ class QueryBuilderTest extends TestCase
         ;
 
         $result = $this->qb
-            ->getResults()
+            ->fetchAll()
         ;
 
         $count = 0;
@@ -85,7 +85,7 @@ class QueryBuilderTest extends TestCase
             ->join('author')
             ->join('user')
             ->byId(10)
-            ->getOne()
+            ->fetchOne()
         ;
     }
 
@@ -124,7 +124,7 @@ class QueryBuilderTest extends TestCase
                 PostModel::lessOrEqual('id', 10),
                 PostModel::greaterOrEqual('id', 0),
             ])
-            ->getOne()
+            ->fetchOne()
         ;
     }
 
@@ -181,7 +181,7 @@ class QueryBuilderTest extends TestCase
                 PostModel::like('title', 'News%'),
                 PostModel::isNull('activationCode'),
             ])
-            ->getOne()
+            ->fetchOne()
         ;
 
         $this->assertInstanceOf(PostModel::class, $actual);
@@ -203,7 +203,7 @@ class QueryBuilderTest extends TestCase
         $this->qb
             ->orderBy(PostModel::class, 'id', 'DESC')
             ->byId(10)
-            ->getOne()
+            ->fetchOne()
         ;
     }
 }

@@ -130,26 +130,11 @@ class QueryBuilder
     }
 
     /**
-     * Execute the query, and get a Generator returning model objects.
-     *
-     * @return Generator
-     */
-    public function getResults(): Generator
-    {
-        $model = $this->from;
-        $stmt = $this->execute();
-
-        while (($row = $stmt->fetch())) {
-            yield $model::createFromArray($row, $this->metadata);
-        }
-    }
-
-    /**
      * Execute the query, and get a single object.
      *
      * @return Model|bool
      */
-    public function getOne()
+    public function fetchOne()
     {
         $model = $this->from;
         $stmt = $this->limit(1)->execute();
@@ -159,6 +144,21 @@ class QueryBuilder
         }
 
         return false;
+    }
+
+    /**
+     * Execute the query, and get a Generator returning model objects.
+     *
+     * @return Generator
+     */
+    public function fetchAll(): Generator
+    {
+        $model = $this->from;
+        $stmt = $this->execute();
+
+        while (($row = $stmt->fetch())) {
+            yield $model::createFromArray($row, $this->metadata);
+        }
     }
 
     /**
