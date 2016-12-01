@@ -110,4 +110,17 @@ $post->getId();
 $post->getTitle();
 $post->getUser()->getId();
 $post->getUser()->getName();
+
+// The `fetchAll` method returns a Generator, not an array
+$posts = $conn->find(PostModel::class)
+    ->where([
+        PostModel::equal('userId', 2),
+        PostModel::like('title', 'News%'),
+    ])
+    ->fetchAll()
+;
+
+foreach ($posts as $post) {
+    // $post->getId()
+}
 ```
