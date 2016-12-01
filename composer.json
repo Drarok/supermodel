@@ -1,0 +1,33 @@
+{
+    "name": "zerifas/supermodel",
+    "description": "A simple model library for PHP.",
+    "authors": [
+        {
+            "name": "Mat Gadd",
+            "email": "mat@zerifas.com"
+        }
+    ],
+    "license": "Apache-2.0",
+    "autoload": {
+        "psr-4": {
+            "Zerifas\\Supermodel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Zerifas\\Supermodel\\Test\\": "tests/"
+        }
+    },
+    "require": {
+        "php": ">= 7.0",
+        "symfony/console": "^3.1",
+        "zerifas/json": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5.6",
+        "squizlabs/php_codesniffer": "^2.0"
+    },
+    "bin": [
+        "bin/supermodel"
+    ]
+}
