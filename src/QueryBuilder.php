@@ -33,7 +33,7 @@ class QueryBuilder
     /**
      * @var ColumnReference[]
      */
-    private $whereClause = [];
+    private $where = [];
 
     /**
      * @var string[]
@@ -77,26 +77,24 @@ class QueryBuilder
      *
      * @return QueryBuilder
      */
-    public function where(array $where): QueryBuilder
+    public function where(ColumnReference $ref): QueryBuilder
     {
-        $this->whereClause = array_merge($this->whereClause, $where);
+        $this->where[] = $ref;
         return $this;
     }
 
     /**
      * Add an order by clause
      *
-     * @param string $model Class name of the model
-     * @param string $column Name of the column
+     * @param ColumnReference $columnReference Reference to column to sort on
      * @param string $direction Optional direction, defaults to ASC
      *
      * @return QueryBuilder
      */
-    public function orderBy(string $model, string $column, string $direction = 'ASC'): QueryBuilder
+    public function orderBy(ColumnReference $columnReference, string $direction = 'ASC')
     {
-        $table = $this->metadata->getTableName($model);
         $direction = (strtoupper($direction) === 'DESC') ? 'DESC' : 'ASC';
-        $this->orderBy[] = "`$table`.`$column` $direction";
+        $this->orderBy[] = [$columnReference, $direction];
         return $this;
     }
 
@@ -123,10 +121,7 @@ class QueryBuilder
     public function byId(int $id): QueryBuilder
     {
         $model = $this->from;
-
-        return $this->where([
-            $model::equal('id', $id)
-        ]);
+        return $this->where($model::equal('id', $id));
     }
 
     /**
@@ -182,9 +177,9 @@ class QueryBuilder
         }
 
         $params = [];
-        if (count($this->whereClause) > 0) {
+        if (count($this->where) > 0) {
             $where = [];
-            foreach ($this->whereClause as $columnRef) {
+            foreach ($this->where as $columnRef) {
                 $where[] = $columnRef->getSQL();
 
                 if ($columnRef->getOperator() !== ColumnReference::OPERATOR_IS_NULL) {
@@ -195,7 +190,11 @@ class QueryBuilder
         }
 
         if (count($this->orderBy) > 0) {
-            $sql .= ' ORDER BY ' . implode(', ', $this->orderBy);
+            $map = function (array $order) {
+                return $order[0]->getIdentifier() . ' ' . $order[1];
+            };
+
+            $sql .= ' ORDER BY ' . implode(', ', array_map($map, $this->orderBy));
         }
 
         if ($this->limit !== null) {

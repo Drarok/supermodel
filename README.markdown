@@ -103,6 +103,8 @@ $post = $conn->find(PostModel::class)
         PostModel::greaterThan('id', 10),
         PostModel::equal('user.id', 22),
     ])
+    ->orderBy(PostModel::column('user.username'), 'ASC')
+    ->orderBy(PostModel::column('createdAt'), 'DESC')
     ->fetchOne()
 ;
 
@@ -113,10 +115,8 @@ $post->getUser()->getName();
 
 // The `fetchAll` method returns a Generator, not an array
 $posts = $conn->find(PostModel::class)
-    ->where([
-        PostModel::equal('userId', 2),
-        PostModel::like('title', 'News%'),
-    ])
+    ->where(PostModel::equal('userId', 2))
+    ->where(PostModel::like('title', 'News%'))
     ->fetchAll()
 ;
 

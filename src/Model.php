@@ -43,6 +43,11 @@ abstract class Model implements SupermodelInterface
         return $obj;
     }
 
+    public static function column(string $column)
+    {
+        return static::createColumnReference('', $column, null);
+    }
+
     public static function equal(string $column, $value): ColumnReference
     {
         return static::createColumnReference(ColumnReference::OPERATOR_EQUAL, $column, $value);

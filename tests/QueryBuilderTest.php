@@ -115,15 +115,13 @@ class QueryBuilderTest extends TestCase
         $this->qb
             ->join('author')
             ->join('user')
-            ->where([
-                PostModel::equal('id', 1),
-                PostModel::equal('author.enabled', true),
-                PostModel::notEqual('user.enabled', false),
-                PostModel::lessThan('id', 10),
-                PostModel::greaterThan('id', 0),
-                PostModel::lessOrEqual('id', 10),
-                PostModel::greaterOrEqual('id', 0),
-            ])
+            ->where(PostModel::equal('id', 1))
+            ->where(PostModel::equal('author.enabled', true))
+            ->where(PostModel::notEqual('user.enabled', false))
+            ->where(PostModel::lessThan('id', 10))
+            ->where(PostModel::greaterThan('id', 0))
+            ->where(PostModel::lessOrEqual('id', 10))
+            ->where(PostModel::greaterOrEqual('id', 0))
             ->fetchOne()
         ;
     }
@@ -176,11 +174,9 @@ class QueryBuilderTest extends TestCase
         ;
 
         $actual = $this->qb
-            ->where([
-                PostModel::greaterThan('id', 1),
-                PostModel::like('title', 'News%'),
-                PostModel::isNull('activationCode'),
-            ])
+            ->where(PostModel::greaterThan('id', 1))
+            ->where(PostModel::like('title', 'News%'))
+            ->where(PostModel::isNull('activationCode'))
             ->fetchOne()
         ;
 
@@ -191,7 +187,8 @@ class QueryBuilderTest extends TestCase
 
     public function testOrderBy()
     {
-        $sql = 'SELECT * FROM `posts` WHERE `posts`.`id` = ? ORDER BY `posts`.`id` DESC LIMIT 1';
+        $sql = 'SELECT * FROM `posts` WHERE `posts`.`id` = ? '
+            . 'ORDER BY `user`.`username` ASC, `posts`.`createdAt` DESC LIMIT 1';
 
         $this->conn
             ->expects($this->once())
@@ -201,7 +198,8 @@ class QueryBuilderTest extends TestCase
         ;
 
         $this->qb
-            ->orderBy(PostModel::class, 'id', 'DESC')
+            ->orderBy(PostModel::column('user.username'), 'ASC')
+            ->orderBy(PostModel::column('createdAt'), 'DESC')
             ->byId(10)
             ->fetchOne()
         ;
