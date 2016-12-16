@@ -45,6 +45,11 @@ class QueryBuilder
      */
     private $limit = null;
 
+    /**
+     * @var ?int
+     */
+    private $offset = null;
+
     public function __construct(Connection $conn, string $from, MetadataCache $metadata)
     {
         $this->conn = $conn;
@@ -108,6 +113,19 @@ class QueryBuilder
     public function limit(int $limit): QueryBuilder
     {
         $this->limit = $limit;
+        return $this;
+    }
+
+    /**
+     * Set the offset for this query
+     *
+     * @param int $offset
+     *
+     * @return QueryBuilder
+     */
+    public function offset(int $offset): QueryBuilder
+    {
+        $this->offset = $offset;
         return $this;
     }
 
@@ -199,6 +217,10 @@ class QueryBuilder
 
         if ($this->limit !== null) {
             $sql .= ' LIMIT ' . $this->limit;
+
+            if ($this->offset !== null) {
+                $sql .= ' OFFSET ' . $this->offset;
+            }
         }
 
         $stmt = $this->conn->prepare($sql);

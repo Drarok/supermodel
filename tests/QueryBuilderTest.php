@@ -204,4 +204,25 @@ class QueryBuilderTest extends TestCase
             ->fetchOne()
         ;
     }
+
+    public function testLimitAndOffset()
+    {
+        $sql = 'SELECT * FROM `posts` LIMIT 10 OFFSET 15';
+
+        $this->conn
+            ->expects($this->once())
+            ->method('prepare')
+            ->with($sql)
+            ->willReturn(new \PDOStatement())
+        ;
+
+        $result = $this->qb
+            ->limit(10)
+            ->offset(15)
+            ->fetchAll()
+        ;
+
+        // Force the Generator to run.
+        iterator_count($result);
+    }
 }
