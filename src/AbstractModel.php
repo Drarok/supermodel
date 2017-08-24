@@ -9,7 +9,7 @@ abstract class AbstractModel
     /**
      * Version of Supermodel.
      */
-    const VERSION = '1.3.0';
+    const VERSION = '1.3.1';
 
     /**
      * Array of column names as contained in the _table_. If you want to change
@@ -154,19 +154,17 @@ abstract class AbstractModel
     }
 
     /**
-     * Find by id, and return an initialised instance.
+     * Find a single row by given criteria.
      *
-     * @param PDO $db Database connection.
-     * @param int $id Primary key value.
+     * @param PDO   $db    Database connection.
+     * @param array $where Column => value map to search on.
      *
      * @return AbstractModel|false
      */
-    public static function findById(PDO $db, $id)
+    public static function findOneBy(PDO $db, array $where = [])
     {
         $stmt = (new QueryBuilder($db, static::class))
-            ->where([
-                'id' => $id,
-            ])
+            ->where($where)
             ->limit(1)
             ->execute()
         ;
@@ -176,6 +174,21 @@ abstract class AbstractModel
         }
 
         return false;
+    }
+
+    /**
+     * Find by id, and return an initialised instance.
+     *
+     * @param PDO $db Database connection.
+     * @param int $id Primary key value.
+     *
+     * @return AbstractModel|false
+     */
+    public static function findById(PDO $db, $id)
+    {
+        return static::findOneBy($db, [
+            'id' => $id,
+        ]);
     }
 
     /**
