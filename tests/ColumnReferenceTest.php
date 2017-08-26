@@ -18,7 +18,7 @@ class ColumnReferenceTest extends TestCase
         $value = mt_rand(0, 1024);
         $ref = new ColumnReference('table', 'column', $operator, $value);
 
-        if ($operator === ColumnReference::OPERATOR_IS_NULL) {
+        if (in_array($operator, [ColumnReference::OPERATOR_IS_NULL, ColumnReference::OPERATOR_IS_NOT_NULL])) {
             $sql = "`table`.`column` $operator";
         } else {
             $sql = "`table`.`column` $operator ?";
@@ -41,6 +41,7 @@ class ColumnReferenceTest extends TestCase
             [ColumnReference::OPERATOR_GREATER_OR_EQUAL],
             [ColumnReference::OPERATOR_LIKE],
             [ColumnReference::OPERATOR_IS_NULL],
+            [ColumnReference::OPERATOR_IS_NOT_NULL],
         ];
     }
 }

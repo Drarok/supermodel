@@ -13,6 +13,7 @@ class ColumnReference
 
     const OPERATOR_LIKE = 'LIKE';
     const OPERATOR_IS_NULL = 'IS NULL';
+    const OPERATOR_IS_NOT_NULL = 'IS NOT NULL';
 
     protected $table;
     protected $column;
@@ -44,11 +45,13 @@ class ColumnReference
 
     public function getSQL(): string
     {
-        if ($this->operator === static::OPERATOR_IS_NULL) {
-            return "`$this->table`.`$this->column` IS NULL";
+        $components = [$this->getIdentifier(), $this->operator];
+
+        if ($this->operator !== static::OPERATOR_IS_NULL && $this->operator !== static::OPERATOR_IS_NOT_NULL) {
+            $components[] = '?';
         }
 
-        return "`$this->table`.`$this->column` $this->operator ?";
+        return implode(' ', $components);
     }
 
     public function getValue()
