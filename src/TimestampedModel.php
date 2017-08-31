@@ -9,6 +9,16 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 
 abstract class TimestampedModel extends Model
 {
+    /**
+     * @var DateTime
+     */
+    protected $createdAt;
+
+    /**
+     * @var DateTime
+     */
+    protected $updatedAt;
+
     public static function getValueTransformers(): array
     {
         return [

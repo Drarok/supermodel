@@ -2,6 +2,9 @@
 
 namespace Zerifas\Supermodel;
 
+use Zerifas\Supermodel\Relation\AbstractRelation;
+use Zerifas\Supermodel\Transformers\TransformerInterface;
+
 interface SupermodelInterface
 {
     /**
@@ -19,16 +22,16 @@ interface SupermodelInterface
     public static function getColumns(): array;
 
     /**
-     * Get value transformers
-     *
-     * @return array
-     */
-    public static function getValueTransformers(): array;
-
-    /**
      * Get relations
      *
-     * @return ColumnReference[]
+     * @return AbstractRelation[]
      */
     public static function getRelations(): array;
+
+    /**
+     * Get value transformers
+     *
+     * @return TransformerInterface[]
+     */
+    public static function getValueTransformers(): array;
 }

@@ -2,6 +2,6 @@
 
 namespace Zerifas\Supermodel\Relation;
 
-class BelongsToRelation extends AbstractRelation
+abstract class ManyToManyRelation
 {
 }

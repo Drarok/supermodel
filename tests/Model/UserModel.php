@@ -5,11 +5,18 @@ namespace Zerifas\Supermodel\Test\Model;
 use Zerifas\Supermodel\AutoAccessorsTrait;
 use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\Model;
+use Zerifas\Supermodel\Relation\HasManyRelation;
 use Zerifas\Supermodel\Transformers\BooleanTransformer;
 
 class UserModel extends Model
 {
     use AutoAccessorsTrait;
+
+    protected $username;
+    protected $enabled;
+
+    protected $userPosts;
+    protected $authorPosts;
 
     public static function getTableName(): string
     {
@@ -25,26 +32,18 @@ class UserModel extends Model
         ];
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            'userPosts' => new HasManyRelation(PostModel::class, 'userId'),
+            'authorPosts' => new HasManyRelation(PostModel::class, 'authorId'),
+        ];
+    }
+
     public static function getValueTransformers(): array
     {
         return [
             'enabled' => BooleanTransformer::class,
         ];
-    }
-
-    public static function getRelations(): array
-    {
-        return [];
-    }
-
-    public function getPosts(Connection $conn): Generator
-    {
-        return $conn
-            ->find(PostModel::class)
-            ->where([
-                PostModel::equal('userId', $this->getId()),
-            ])
-            ->getResults()
-        ;
     }
 }

@@ -6,6 +6,7 @@ use Doctrine\Instantiator\Exception\InvalidArgumentException;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
+use PHPUnit_Framework_MockObject_MockObject;
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\Metadata\MetadataCache;
@@ -28,21 +29,30 @@ class QueryBuilderTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        $this->conn = $this->createMock(Connection::class);
-        $metadata = new MetadataCache(new MemoryCache());
-        $this->qb = new QueryBuilder($this->conn, PostModel::class, $metadata);
+
+        /** @var PHPUnit_Framework_MockObject_MockObject $mockConn */
+        $mockConn = $this->createMock(Connection::class);
+        $mockConn
+            ->method('getMetadata')
+            ->willReturn(new MetadataCache(new MemoryCache()));
+
+        $this->conn = $mockConn;
+        $this->qb = new QueryBuilder($this->conn, PostModel::class, 'p');
     }
 
     public function testSimpleQuery()
     {
-        $sql = 'SELECT * FROM `posts`';
+        $sql = 'SELECT * FROM `posts` AS `p`';
 
         $stmt = $this->createMock('PDOStatement');
         $stmt->expects($this->exactly(2))
             ->method('fetch')
-            ->willReturn([
-                'posts.id' => 10,
-            ], false)
+            ->willReturn(
+                [
+                    'p.id' => 10,
+                ],
+                false
+            )
         ;
 
         $this->conn
@@ -67,10 +77,10 @@ class QueryBuilderTest extends TestCase
     public function testSimpleJoinQuery()
     {
         $sql = implode(' ', [
-            'SELECT * FROM `posts`',
-            'INNER JOIN `users` AS `author` ON `author`.`id` = `posts`.`authorId`',
-            'INNER JOIN `users` AS `user` ON `user`.`id` = `posts`.`userId`',
-            'WHERE `posts`.`id` = ?',
+            'SELECT * FROM `posts` AS `p`',
+            'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
+            'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
+            'WHERE `p`.`id` = ?',
             'LIMIT 1',
         ]);
 
@@ -82,8 +92,8 @@ class QueryBuilderTest extends TestCase
         ;
 
         $this->qb
-            ->join('author')
-            ->join('user')
+            ->join('author', 'a')
+            ->join('user', 'u')
             ->byId(10)
             ->fetchOne()
         ;
@@ -92,78 +102,28 @@ class QueryBuilderTest extends TestCase
     public function testJoinWithWhereQuery()
     {
         $sql = implode(' ', [
-            'SELECT * FROM `posts`',
-            'INNER JOIN `users` AS `author` ON `author`.`id` = `posts`.`authorId`',
-            'INNER JOIN `users` AS `user` ON `user`.`id` = `posts`.`userId`',
-            'WHERE `posts`.`id` = ?',
-            'AND `author`.`enabled` = ?',
-            'AND `user`.`enabled` != ?',
-            'AND `posts`.`id` < ?',
-            'AND `posts`.`id` > ?',
-            'AND `posts`.`id` <= ?',
-            'AND `posts`.`id` >= ?',
+            'SELECT * FROM `posts` AS `p`',
+            'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
+            'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
+            'WHERE `p`.`id` = ?',
+            'AND `p`.`createdAt` > ?',
+            'AND `a`.`enabled` = ?',
+            'AND `u`.`enabled` != ?',
+            'AND `p`.`id` < ?',
+            'AND `p`.`id` > ?',
+            'AND `p`.`id` <= ?',
+            'AND `p`.`id` >= ?',
+            'AND `p`.`id` IS NULL',
+            'AND `p`.`id` IS NOT NULL',
             'LIMIT 1',
         ]);
 
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn(new \PDOStatement())
-        ;
-
-        $this->qb
-            ->join('author')
-            ->join('user')
-            ->where(PostModel::equal('id', 1))
-            ->where(PostModel::equal('author.enabled', true))
-            ->where(PostModel::notEqual('user.enabled', false))
-            ->where(PostModel::lessThan('id', 10))
-            ->where(PostModel::greaterThan('id', 0))
-            ->where(PostModel::lessOrEqual('id', 10))
-            ->where(PostModel::greaterOrEqual('id', 0))
-            ->fetchOne()
-        ;
-    }
-
-    public function testJoinFailsWithInvalidRelationName()
-    {
-        $this->expectException('InvalidArgumentException');
-        $this->expectExceptionMessage(
-            'no-such-relation is not a defined relation of Zerifas\\Supermodel\\Test\\Model\\PostModel'
-        );
-
-        $this->qb
-            ->join('no-such-relation')
-        ;
-    }
-
-    public function testOperators()
-    {
-        $sql = implode(' ', [
-            'SELECT * FROM `posts`',
-            'WHERE `posts`.`id` > ?',
-            'AND `posts`.`title` LIKE ?',
-            'AND `posts`.`activationCode` IS NULL',
-            'LIMIT 1'
-        ]);
-
-        $date = '2016-01-01 00:00:00';
+        $datetime = \DateTime::createFromFormat('Y-m-d H:i:s', '2017-01-01 00:00:00');
 
         $stmt = $this->createMock('PDOStatement');
-        $stmt
-            ->expects($this->once())
-            ->method('fetch')
-            ->willReturn([
-                'posts.id' => 1,
-                'posts.createdAt' => $date,
-                'posts.updatedAt' => $date,
-                'posts.authorId' => 1,
-                'posts.userId' => 2,
-                'posts.title' => 'This is a sample title',
-                'posts.body' => 'This is a sample body',
-                'posts.enabled' => 1,
-            ])
+        $stmt->expects($this->once())
+            ->method('execute')
+            ->with([1, '2017-01-01 00:00:00', 1, 0, 10, 10, 10, 10])
         ;
 
         $this->conn
@@ -173,22 +133,40 @@ class QueryBuilderTest extends TestCase
             ->willReturn($stmt)
         ;
 
-        $actual = $this->qb
-            ->where(PostModel::greaterThan('id', 1))
-            ->where(PostModel::like('title', 'News%'))
-            ->where(PostModel::isNull('activationCode'))
+        $this->qb
+            ->join('author', 'a')
+            ->join('user', 'u')
+            ->where('p.id = ?', 1)
+            ->where('p.createdAt > ?', $datetime)
+            ->where('a.enabled = ?', true)
+            ->where('u.enabled != ?', false)
+            ->where('p.id < ?', 10)
+            ->where('p.id > ?', 10)
+            ->where('p.id <= ?', 10)
+            ->where('p.id >= ?', 10)
+            ->where('p.id IS NULL')
+            ->where('p.id IS NOT NULL')
             ->fetchOne()
         ;
+    }
 
-        $this->assertInstanceOf(PostModel::class, $actual);
-        $this->assertAttributeEquals(1, 'id', $actual);
-        $this->assertEquals('This is a sample title', $actual->getTitle());
+    public function testJoinFailsWithInvalidRelationName()
+    {
+        $this->expectException('InvalidArgumentException');
+        $this->expectExceptionMessage(
+            'no-such-relation is not a relation of Zerifas\\Supermodel\\Test\\Model\\PostModel'
+        );
+
+        $this->qb
+            ->join('no-such-relation', 'n')
+        ;
     }
 
     public function testOrderBy()
     {
-        $sql = 'SELECT * FROM `posts` WHERE `posts`.`id` = ? '
-            . 'ORDER BY `user`.`username` ASC, `posts`.`createdAt` DESC LIMIT 1';
+        $sql = 'SELECT * FROM `posts` AS `p` '
+            . 'WHERE `p`.`id` = ? '
+            . 'ORDER BY `p`.`createdAt` DESC LIMIT 1';
 
         $this->conn
             ->expects($this->once())
@@ -198,8 +176,7 @@ class QueryBuilderTest extends TestCase
         ;
 
         $this->qb
-            ->orderBy(PostModel::column('user.username'), 'ASC')
-            ->orderBy(PostModel::column('createdAt'), 'DESC')
+            ->orderBy('p.createdAt', 'DESC')
             ->byId(10)
             ->fetchOne()
         ;
@@ -207,7 +184,7 @@ class QueryBuilderTest extends TestCase
 
     public function testLimitAndOffset()
     {
-        $sql = 'SELECT * FROM `posts` LIMIT 10 OFFSET 15';
+        $sql = 'SELECT * FROM `posts` AS `p` LIMIT 10 OFFSET 15';
 
         $this->conn
             ->expects($this->once())

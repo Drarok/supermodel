@@ -60,7 +60,7 @@ class ConnectionTest extends TestCase
     public function testFind()
     {
         // This object won't contain any data because the SQLite driver doesn't support PDO::ATTR_FETCH_TABLE_NAMES
-        $post = $this->conn->find(PostModel::class)
+        $post = $this->conn->find(PostModel::class, 'p')
             ->byId(1)
             ->fetchOne()
         ;
@@ -72,7 +72,7 @@ class ConnectionTest extends TestCase
     public function testSaveCreate()
     {
         $post = new PostModel();
-        $post->title = 'This is a sample title!!!';
+        $post->setTitle('This is a sample title!!!');
         $this->conn->save($post);
 
         $stmt = $this->conn->prepare('SELECT COUNT(*) FROM posts');
@@ -86,7 +86,7 @@ class ConnectionTest extends TestCase
     {
         $post = new PostModel();
         $post->setId(1);
-        $post->title = 'This is a sample title!!!';
+        $post->setTitle('This is a sample title!!!');
         $this->conn->save($post);
 
         $stmt = $this->conn->prepare('SELECT COUNT(*) FROM posts');
@@ -98,7 +98,7 @@ class ConnectionTest extends TestCase
         $rows = $stmt->fetchAll();
 
         $this->assertCount(1, $rows);
-        $this->assertEquals($post->title, $rows[0]['title']);
+        $this->assertEquals($post->getTitle(), $rows[0]['title']);
     }
 
     public function testSaveAll()

@@ -26,6 +26,11 @@ class Connection
         $this->metadata = new MetadataCache($cache);
     }
 
+    public function getMetadata(): MetadataCache
+    {
+        return $this->metadata;
+    }
+
     /**
      * Get a query builder for the given model
      *
@@ -33,9 +38,9 @@ class Connection
      *
      * @return QueryBuilder
      */
-    public function find(string $class): QueryBuilder
+    public function find(string $class, string $alias): QueryBuilder
     {
-        return new QueryBuilder($this, $class, $this->metadata);
+        return new QueryBuilder($this, $class, $alias);
     }
 
     /**

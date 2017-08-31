@@ -12,7 +12,7 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Test\Model\PostModel;
 use Zerifas\Supermodel\Test\Model\UserModel;
 
-class ObjectTest extends TestCase
+class ModelTest extends TestCase
 {
     /**
      * @var MetadataCache
@@ -39,7 +39,7 @@ class ObjectTest extends TestCase
             'posts.enabled' => 1,
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata);
+        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
 
         $this->assertAttributeEquals(1, 'id', $obj);
         $this->assertAttributeEquals(DateTime::createFromFormat('Y-m-d H:i:s', $date), 'createdAt', $obj);
@@ -65,7 +65,7 @@ class ObjectTest extends TestCase
             'user.enabled' => 1,
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata);
+        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
 
         $this->assertEquals('This is a title', $obj->getTitle());
 
@@ -98,7 +98,7 @@ class ObjectTest extends TestCase
             'user.enabled' => 1,
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata);
+        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
 
         $this->assertEquals('This is a title', $obj->getTitle());
 
@@ -137,7 +137,7 @@ class ObjectTest extends TestCase
             'user.enabled' => 1,
         ];
 
-        $post = PostModel::createFromArray($data, $this->metadata);
+        $post = PostModel::createFromArray($data, $this->metadata, 'posts');
         $actual = $post->toArray($this->metadata);
         $now = (new \DateTime())->format('Y-m-d H:i:s');
 
@@ -170,18 +170,7 @@ class ObjectTest extends TestCase
         $data = [
             'posts.id' => 1,
         ];
-        $post = PostModel::createFromArray($data, $this->metadata);
+        $post = PostModel::createFromArray($data, $this->metadata, 'posts');
         $post->setId(2);
-    }
-
-    public function testInvalidRelationException()
-    {
-        $this->expectException('InvalidArgumentException');
-        $this->expectExceptionMessage(
-            'no-such-relation is not a defined relation of Zerifas\\Supermodel\\Test\\Model\\PostModel '
-            . '(Zerifas\\Supermodel\\Test\\Model\\PostModel no-such-relation.enabled)'
-        );
-
-        PostModel::equal('no-such-relation.enabled', true);
     }
 }

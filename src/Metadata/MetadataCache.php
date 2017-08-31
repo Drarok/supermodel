@@ -2,7 +2,11 @@
 
 namespace Zerifas\Supermodel\Metadata;
 
+use InvalidArgumentException;
 use Zerifas\Supermodel\Cache\CacheInterface;
+use Zerifas\Supermodel\Model;
+use Zerifas\Supermodel\Relation\AbstractRelation;
+use Zerifas\Supermodel\Transformers\TransformerInterface;
 
 class MetadataCache
 {
@@ -25,8 +29,9 @@ class MetadataCache
      */
     public function getTableName(string $class): string
     {
+        /** @var Model $class */
         $key = "$class:tableName";
-        if (! $this->cache->has($key)) {
+        if (!$this->cache->has($key)) {
             $this->cache->set($key, $class::getTableName());
         }
 
@@ -38,12 +43,13 @@ class MetadataCache
      *
      * @param string $class String name of the class
      *
-     * @return String[]
+     * @return string[]
      */
     public function getColumns(string $class): array
     {
+        /** @var Model $class */
         $key = "$class:columns";
-        if (! $this->cache->has($key)) {
+        if (!$this->cache->has($key)) {
             $this->cache->set($key, $class::getColumns());
         }
 
@@ -55,12 +61,13 @@ class MetadataCache
      *
      * @param string $class String name of the class
      *
-     * @return array
+     * @return TransformerInterface[]
      */
     public function getValueTransformers(string $class): array
     {
+        /** @var Model $class */
         $key = "$class:valueTransformers";
-        if (! $this->cache->has($key)) {
+        if (!$this->cache->has($key)) {
             $this->cache->set($key, $class::getValueTransformers());
         }
 
@@ -72,15 +79,37 @@ class MetadataCache
      *
      * @param string $class String name of the class
      *
-     * @return ColumnReference[]
+     * @return AbstractRelation[]
      */
     public function getRelations(string $class): array
     {
+        /** @var Model $class */
         $key = "$class:relations";
-        if (! $this->cache->has($key)) {
+        if (!$this->cache->has($key)) {
             $this->cache->set($key, $class::getRelations());
         }
 
         return $this->cache->get($key);
+    }
+
+    /**
+     * Get a single relation for the given model class.
+     *
+     * @param string $class String name of the class
+     * @param string $name Name of the relation
+     *
+     * @return AbstractRelation
+     * @throws InvalidArgumentException
+     */
+    public function getRelation(string $class, string $name): AbstractRelation
+    {
+        $relations = $this->getRelations($class);
+        $relation = $relations[$name] ?? null;
+
+        if (!$relation) {
+            throw new InvalidArgumentException("$name is not a relation of $class");
+        }
+
+        return $relation;
     }
 }

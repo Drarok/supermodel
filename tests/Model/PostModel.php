@@ -11,6 +11,20 @@ class PostModel extends TimestampedModel
 {
     use AutoAccessorsTrait;
 
+    protected $authorId;
+    protected $userId;
+    protected $title;
+    protected $body;
+    protected $enabled;
+
+    protected $author;
+    protected $user;
+
+    public static function getTableName(): string
+    {
+        return 'posts';
+    }
+
     public static function getColumns(): array
     {
         return [
@@ -25,23 +39,18 @@ class PostModel extends TimestampedModel
         ];
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            'author' => new BelongsToRelation(UserModel::class, 'authorId'),
+            'user'   => new BelongsToRelation(UserModel::class, 'userId'),
+        ];
+    }
+
     public static function getValueTransformers(): array
     {
         return array_merge(parent::getValueTransformers(), [
             'enabled' => BooleanTransformer::class,
         ]);
-    }
-
-    public static function getTableName(): string
-    {
-        return 'posts';
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            'author' => new BelongsToRelation(UserModel::class, 'id', 'authorId'),
-            'user'   => new BelongsToRelation(UserModel::class, 'id', 'userId'),
-        ];
     }
 }

@@ -3,10 +3,13 @@
 namespace Zerifas\Supermodel;
 
 use Generator;
+use InvalidArgumentException;
 use PDOStatement;
 
 use Zerifas\Supermodel\Metadata\MetadataCache;
+use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
+use Zerifas\Supermodel\Relation\RelationInterface;
 
 class QueryBuilder
 {
@@ -21,22 +24,27 @@ class QueryBuilder
     private $metadata;
 
     /**
-     * @var string
+     * @var string|Model
      */
-    private $from;
+    private $model;
 
     /**
-     * @var BelongsToRelation[]
+     * @var string
+     */
+    private $alias;
+
+    /**
+     * @var string[]
      */
     private $joins = [];
 
     /**
-     * @var ColumnReference[]
+     * @var QueryBuilderClause[]
      */
     private $where = [];
 
     /**
-     * @var string[]
+     * @var QueryBuilderClause[]
      */
     private $orderBy = [];
 
@@ -50,110 +58,66 @@ class QueryBuilder
      */
     private $offset = null;
 
-    public function __construct(Connection $conn, string $from, MetadataCache $metadata)
+    public function __construct(Connection $conn, string $model, string $alias)
     {
         $this->conn = $conn;
-        $this->from = $from;
-        $this->metadata = $metadata;
+        $this->model = $model;
+        $this->alias = $alias;
+
+        $this->metadata = $conn->getMetadata();
     }
 
-    /**
-     * Join a pre-defined relation
-     *
-     * @param string $name Relation name to join
-     *
-     * @return QueryBuilder
-     */
-    public function join(string $name): QueryBuilder
+    public function join(string $name, string $alias): QueryBuilder
     {
-        $relation = $this->metadata->getRelations($this->from)[$name] ?? null;
-        if ($relation === null) {
-            throw new \InvalidArgumentException("$name is not a defined relation of $this->from");
-        }
+        // This will throw if the relation doesn't exist, but we don't need its result.
+        $this->metadata->getRelation($this->model, $name);
 
-        $this->joins[$name] = $relation;
+        $this->joins[$name] = $alias;
         return $this;
     }
 
-    /**
-     * Add where clauses
-     *
-     * @param ColumnReference[] $where
-     *
-     * @return QueryBuilder
-     */
-    public function where(ColumnReference $ref): QueryBuilder
+    public function where(string $clause, $value = null): QueryBuilder
     {
-        $this->where[] = $ref;
+        $this->where[] = new QueryBuilderClause($clause, $value);
         return $this;
     }
 
-    /**
-     * Add an order by clause
-     *
-     * @param ColumnReference $columnReference Reference to column to sort on
-     * @param string $direction Optional direction, defaults to ASC
-     *
-     * @return QueryBuilder
-     */
-    public function orderBy(ColumnReference $columnReference, string $direction = 'ASC')
+    public function orderBy(string $order, string $direction = 'ASC')
     {
         $direction = (strtoupper($direction) === 'DESC') ? 'DESC' : 'ASC';
-        $this->orderBy[] = [$columnReference, $direction];
+        $this->orderBy[] = new QueryBuilderClause($order, $direction);
         return $this;
     }
 
-    /**
-     * Set the limit for this query
-     *
-     * @param int $limit
-     *
-     * @return QueryBuilder
-     */
     public function limit(int $limit): QueryBuilder
     {
-        $this->limit = $limit;
+        $this->limit = $limit ?: null;
         return $this;
     }
 
-    /**
-     * Set the offset for this query
-     *
-     * @param int $offset
-     *
-     * @return QueryBuilder
-     */
     public function offset(int $offset): QueryBuilder
     {
-        $this->offset = $offset;
+        $this->offset = $offset ?: null;
         return $this;
     }
 
-    /**
-     * Simple query by id column
-     *
-     * @param int $id
-     *
-     * @return QueryBuilder
-     */
     public function byId(int $id): QueryBuilder
     {
-        $model = $this->from;
-        return $this->where($model::equal('id', $id));
+        return $this->where("{$this->alias}.id = ?", $id);
     }
 
     /**
      * Execute the query, and get a single object.
      *
-     * @return Model|bool
+     * @return Model|false
      */
     public function fetchOne()
     {
-        $model = $this->from;
         $stmt = $this->limit(1)->execute();
 
+        $model = $this->model;
         if (($row = $stmt->fetch())) {
-            return $model::createFromArray($row, $this->metadata);
+            return $model::createFromArray($row, $this->metadata, $this->alias);
         }
 
         return false;
@@ -166,11 +130,11 @@ class QueryBuilder
      */
     public function fetchAll(): Generator
     {
-        $model = $this->from;
         $stmt = $this->execute();
 
+        $model = $this->model;
         while (($row = $stmt->fetch())) {
-            yield $model::createFromArray($row, $this->metadata);
+            yield $model::createFromArray($row, $this->metadata, $this->alias);
         }
     }
 
@@ -181,35 +145,58 @@ class QueryBuilder
      */
     private function execute(): PDOStatement
     {
-        $fromTable = $this->metadata->getTableName($this->from);
-        $sql = "SELECT * FROM `$fromTable`";
+        $table = $this->metadata->getTableName($this->model);
 
-        foreach ($this->joins as $name => $relation) {
-            $joinModel = $relation->getJoinModel();
-            $joinColumn = $relation->getJoinColumn();
+        $models = [
+            $this->alias => $this->model,
+        ];
+
+        $sql = "SELECT * FROM `$table` AS `$this->alias`";
+
+        $relations = $this->metadata->getRelations($this->model);
+
+        foreach ($this->joins as $name => $joinAlias) {
+            $relation = $relations[$name];
+
+            $models[$joinAlias] = $joinModel = $relation->getModel();
+            $foreignColumn = $relation->getForeignColumn();
             $localColumn = $relation->getLocalColumn();
 
             $joinTable = $this->metadata->getTableName($joinModel);
 
-            $sql .= " INNER JOIN `$joinTable` AS `$name` ON `$name`.`$joinColumn` = `$fromTable`.`$localColumn`";
+            $sql .= " INNER JOIN `$joinTable` AS `$joinAlias` ON " .
+                "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
         }
 
+        // TODO: Less looping and fetching of transformers.
         $params = [];
         if (count($this->where) > 0) {
-            $where = [];
-            foreach ($this->where as $columnRef) {
-                $where[] = $columnRef->getSQL();
+            foreach ($this->where as $idx => $clause) {
+                $model = $models[$clause->getAlias()];
 
-                if ($columnRef->getOperator() !== ColumnReference::OPERATOR_IS_NULL) {
-                    $params[] = $columnRef->getValue();
+                $transformers = $this->metadata->getValueTransformers($model);
+                $value = $clause->getValue();
+
+                if ($value !== null && ($transformer = $transformers[$clause->getColumn()] ?? null)) {
+                    $value = $transformer::toArray($value);
                 }
+
+                if ($value !== null) {
+                    $params[] = $value;
+                }
+
             }
-            $sql .= ' WHERE ' . implode(' AND ', $where);
+
+            $map = function (QueryBuilderClause $clause) {
+                return $clause->toString();
+            };
+
+            $sql .= ' WHERE ' . implode(' AND ', array_map($map, $this->where));
         }
 
         if (count($this->orderBy) > 0) {
-            $map = function (array $order) {
-                return $order[0]->getIdentifier() . ' ' . $order[1];
+            $map = function (QueryBuilderClause $clause) {
+                return $clause->toString() . ' ' . $clause->getValue();
             };
 
             $sql .= ' ORDER BY ' . implode(', ', array_map($map, $this->orderBy));
@@ -224,11 +211,13 @@ class QueryBuilder
         }
 
         $stmt = $this->conn->prepare($sql);
+
         if (count($params) > 0) {
             $stmt->execute($params);
         } else {
             $stmt->execute();
         }
+
         return $stmt;
     }
 }
