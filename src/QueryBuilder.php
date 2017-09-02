@@ -9,6 +9,7 @@ use PDOStatement;
 use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
+use Zerifas\Supermodel\Relation\HasManyRelation;
 use Zerifas\Supermodel\Relation\RelationInterface;
 use Zerifas\Supermodel\Transformers\TransformerInterface;
 
@@ -116,9 +117,8 @@ class QueryBuilder
     {
         $stmt = $this->limit(1)->execute();
 
-        $model = $this->model;
         if (($row = $stmt->fetch())) {
-            return $model::createFromArray($row, $this->metadata, $this->alias);
+            return $this->createInstance($row);
         }
 
         return false;
@@ -133,9 +133,10 @@ class QueryBuilder
     {
         $stmt = $this->execute();
 
-        $model = $this->model;
+        // TODO: Pre-fetch all the related items here!
+
         while (($row = $stmt->fetch())) {
-            yield $model::createFromArray($row, $this->metadata, $this->alias);
+            yield $this->createInstance($row);
         }
     }
 
@@ -202,16 +203,15 @@ class QueryBuilder
     {
         $table = $this->metadata->getTableName($this->model);
 
-        $sql = "SELECT * FROM `$table` AS `$this->alias`";
+        $select = [
+            "`$this->alias`.*",
+        ];
+        $sql = '';
 
         $relations = $this->metadata->getRelations($this->model);
 
         foreach ($this->joins as $name => $joinAlias) {
             $relation = $relations[$name];
-
-            if (!($relation instanceof BelongsToRelation)) {
-                continue;
-            }
 
             $joinModel = $relation->getModel();
             $foreignColumn = $relation->getForeignColumn();
@@ -219,8 +219,17 @@ class QueryBuilder
 
             $joinTable = $this->metadata->getTableName($joinModel);
 
-            $sql .= " INNER JOIN `$joinTable` AS `$joinAlias` ON " .
-                "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
+            if ($relation instanceof HasManyRelation) {
+                $sql .= " LEFT OUTER JOIN `$joinTable` AS `$joinAlias` ON " .
+                    "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
+                $select[] = "GROUP_CONCAT(`$joinAlias`.`id`) AS `$name`";
+            } elseif ($relation instanceof BelongsToRelation) {
+                $sql .= " INNER JOIN `$joinTable` AS `$joinAlias` ON " .
+                    "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
+            } else {
+                $class = get_class($relation);
+                throw new \InvalidArgumentException("Cannot handle $class as a relation of $this->model");
+            }
         }
 
         if (count($this->where) > 0) {
@@ -229,6 +238,16 @@ class QueryBuilder
             };
 
             $sql .= ' WHERE ' . implode(' AND ', array_map($map, $this->where));
+        }
+
+        $sql = sprintf(
+            "SELECT %s FROM `$table` AS `$this->alias`%s",
+            implode(', ', $select),
+            $sql
+        );
+
+        if (count($select) > 1) {
+            $sql .= " GROUP BY `$this->alias`.`id`";
         }
 
         if (count($this->orderBy) > 0) {
@@ -248,5 +267,38 @@ class QueryBuilder
         }
 
         return $sql;
+    }
+
+    /**
+     * Pre-transform HasManyRelation data into objects.
+     *
+     * @param array $data Raw data to create objects from
+     *
+     * @return Model
+     */
+    private function createInstance(array $data): Model
+    {
+        $relations = $this->metadata->getRelations($this->model);
+
+        foreach ($this->joins as $name => $alias) {
+            $relation = $relations[$name];
+
+            if (!($relation instanceof HasManyRelation)) {
+                continue;
+            }
+
+            $foreignIds = array_map('intval', explode(',', $data[$name]));
+
+            $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
+                ->where($name . '.id IN ?', ...$foreignIds)
+                ->fetchAll()
+            ;
+
+            $data[$name] = iterator_to_array($objects);
+        }
+
+        /** @var Model $class */
+        $model = $this->model;
+        return $model::createFromArray($data, $this->metadata, $this->alias);
     }
 }

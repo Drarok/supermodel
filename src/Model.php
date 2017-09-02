@@ -5,6 +5,7 @@ namespace Zerifas\Supermodel;
 use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
+use Zerifas\Supermodel\Relation\HasManyRelation;
 use Zerifas\Supermodel\Relation\RelationInterface;
 use Zerifas\Supermodel\Transformers\TransformerInterface;
 
@@ -18,7 +19,6 @@ abstract class Model implements SupermodelInterface
 
         $columns = $metadata->getColumns(static::class);
         $transformers = $metadata->getValueTransformers(static::class);
-        $relations = $metadata->getRelations(static::class);
 
         /** @var string $column */
         foreach ($columns as $column) {
@@ -32,19 +32,20 @@ abstract class Model implements SupermodelInterface
             $obj->$column = $value;
         }
 
-        foreach ($relations as $name => $relation) {
-            if (!($relation instanceof BelongsToRelation)) {
-                continue;
-            }
-
-            // Handle the case where we have a BelongsToRelation, and its data is available via a SQL JOIN.
-
+        foreach ($metadata->getRelations(static::class) as $name => $relation) {
             /** @var Model $joinModel */
             $joinModel = $relation->getModel();
             $foreignColumn = $relation->getForeignColumn();
 
-            if (!empty($data["$name.$foreignColumn"])) {
-                $obj->$name = $joinModel::createFromArray($data, $metadata, $name);
+            if ($relation instanceof HasManyRelation) {
+                $obj->$name = $data[$name] ?? null;
+            } elseif ($relation instanceof BelongsToRelation) {
+                if (!empty($data["$name.$foreignColumn"])) {
+                    $obj->$name = $joinModel::createFromArray($data, $metadata, $name);
+                }
+            } else {
+                $class = static::class;
+                throw new \InvalidArgumentException("Cannot handle $joinModel as a relation of $class");
             }
         }
 

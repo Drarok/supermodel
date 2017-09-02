@@ -15,7 +15,14 @@ class UserModel extends Model
     protected $username;
     protected $enabled;
 
+    /**
+     * @var PostModel[]
+     */
     protected $userPosts;
+
+    /**
+     * @var PostModel[]
+     */
     protected $authorPosts;
 
     public static function getTableName(): string
@@ -45,5 +52,21 @@ class UserModel extends Model
         return [
             'enabled' => BooleanTransformer::class,
         ];
+    }
+
+    /**
+     * @return PostModel[]
+     */
+    public function getUserPosts(): array
+    {
+        return $this->userPosts;
+    }
+
+    /**
+     * @return PostModel[]
+     */
+    public function getAuthorPosts(): array
+    {
+        return $this->authorPosts;
     }
 }

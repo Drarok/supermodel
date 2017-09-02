@@ -42,7 +42,8 @@ class QueryBuilderTest extends TestCase
 
     public function testSimpleQuery()
     {
-        $sql = 'SELECT * FROM `posts` AS `p`';
+        $sql = 'SELECT `p`.* FROM `posts` AS `p`';
+        $sql = 'SELECT `p`.* FROM `posts` AS `p`';
 
         $stmt = $this->createMock('PDOStatement');
         $stmt->expects($this->exactly(2))
@@ -77,7 +78,7 @@ class QueryBuilderTest extends TestCase
     public function testSimpleJoinQuery()
     {
         $sql = implode(' ', [
-            'SELECT * FROM `posts` AS `p`',
+            'SELECT `p`.* FROM `posts` AS `p`',
             'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
             'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
             'WHERE `p`.`id` = ?',
@@ -102,7 +103,7 @@ class QueryBuilderTest extends TestCase
     public function testJoinWithWhereQuery()
     {
         $sql = implode(' ', [
-            'SELECT * FROM `posts` AS `p`',
+            'SELECT `p`.* FROM `posts` AS `p`',
             'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
             'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
             'WHERE `p`.`id` = ?',
@@ -170,7 +171,7 @@ class QueryBuilderTest extends TestCase
 
     public function testOrderBy()
     {
-        $sql = 'SELECT * FROM `posts` AS `p` '
+        $sql = 'SELECT `p`.* FROM `posts` AS `p` '
             . 'WHERE `p`.`id` = ? '
             . 'ORDER BY `p`.`createdAt` DESC LIMIT 1';
 
@@ -190,7 +191,7 @@ class QueryBuilderTest extends TestCase
 
     public function testLimitAndOffset()
     {
-        $sql = 'SELECT * FROM `posts` AS `p` LIMIT 10 OFFSET 15';
+        $sql = 'SELECT `p`.* FROM `posts` AS `p` LIMIT 10 OFFSET 15';
 
         $this->conn
             ->expects($this->once())
@@ -207,5 +208,75 @@ class QueryBuilderTest extends TestCase
 
         // Force the Generator to run.
         iterator_count($result);
+    }
+
+    public function testHasManyRelation()
+    {
+        $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
+            . 'LEFT OUTER JOIN `posts` AS `up` ON `up`.`userId` = `u`.`id` '
+            . 'WHERE `u`.`enabled` = ? '
+            . 'GROUP BY `u`.`id` '
+            . 'LIMIT 1'
+        ;
+
+        $sql2 = 'SELECT `userPosts`.* FROM `posts` AS `userPosts` WHERE `userPosts`.`id` IN (?, ?)';
+
+        $data1 = [
+            'u.id' => 1,
+            'u.username' => 'drarok',
+            'u.enabled' => 1,
+            'userPosts' => '3,5',
+        ];
+
+        $data2 = [
+            'userPosts.id' => 3,
+        ];
+
+        $data3 = [
+            'userPosts.id' => 5,
+        ];
+
+        $stmt1 = $this->createMock('PDOStatement');
+        $stmt1->expects($this->once())
+            ->method('execute')
+            ->with([1])
+        ;
+        $stmt1->expects($this->once())
+            ->method('fetch')
+            ->willReturn($data1)
+        ;
+
+        $stmt2 = $this->createMock('PDOStatement');
+        $stmt2->expects($this->once())
+            ->method('execute')
+            ->with([3, 5])
+        ;
+        $stmt2->expects($this->exactly(3))
+            ->method('fetch')
+            ->willReturnOnConsecutiveCalls($data2, $data3, false)
+        ;
+
+        $this->conn
+            ->expects($this->exactly(2))
+            ->method('prepare')
+            ->withConsecutive([$sql1], [$sql2])
+            ->willReturnOnConsecutiveCalls($stmt1, $stmt2)
+        ;
+
+        /** @var UserModel $result */
+        $result  = (new QueryBuilder($this->conn, UserModel::class, 'u'))
+            ->join('userPosts', 'up')
+            ->where('u.enabled = ?', true)
+            ->fetchOne()
+        ;
+
+        $this->assertInstanceOf(UserModel::class, $result);
+        $this->assertCount(2, $result->getUserPosts());
+
+        $map = function (PostModel $post) {
+            return $post->getId();
+        };
+        $postIds = array_map($map, $result->getUserPosts());
+        $this->assertEquals([3, 5], $postIds);
     }
 }
