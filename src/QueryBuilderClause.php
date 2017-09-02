@@ -22,11 +22,11 @@ class QueryBuilderClause
     private $suffix;
 
     /**
-     * @var mixed
+     * @var array
      */
-    private $value;
+    private $values;
 
-    public function __construct(string $clause, $value = null)
+    public function __construct(string $clause, ...$values)
     {
         if (!preg_match('/^([\w`-]+)\.([\w`-]+)(.*?)$/', $clause, $matches)) {
             throw new InvalidArgumentException("$clause is not in the format alias.column");
@@ -36,12 +36,20 @@ class QueryBuilderClause
         $this->column = trim($matches[2], '`');
         $this->suffix = trim($matches[3]);
 
-        $this->value = $value;
+        $this->values = $values;
     }
 
     public function toString(): string
     {
-        return trim("`$this->alias`.`$this->column` $this->suffix");
+        $suffix = $this->suffix;
+
+        if (strtoupper(substr($suffix, -4)) === 'IN ?') {
+            $paramCount = count($this->values);
+            $placeholders = '(' . implode(', ', array_fill(0, $paramCount, '?')) . ')';
+            $suffix = str_replace('?', $placeholders, $suffix);
+        }
+
+        return trim("`$this->alias`.`$this->column` $suffix");
     }
 
     public function getAlias(): string
@@ -54,8 +62,8 @@ class QueryBuilderClause
         return $this->column;
     }
 
-    public function getValue()
+    public function getValues()
     {
-        return $this->value;
+        return $this->values;
     }
 }

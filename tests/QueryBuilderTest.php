@@ -115,6 +115,9 @@ class QueryBuilderTest extends TestCase
             'AND `p`.`id` >= ?',
             'AND `p`.`id` IS NULL',
             'AND `p`.`id` IS NOT NULL',
+            'AND `p`.`id` IN (?, ?, ?)',
+            'AND `p`.`id` NOT IN (?, ?, ?)',
+            'AND `p`.`id` BETWEEN ? AND ?',
             'LIMIT 1',
         ]);
 
@@ -123,7 +126,7 @@ class QueryBuilderTest extends TestCase
         $stmt = $this->createMock('PDOStatement');
         $stmt->expects($this->once())
             ->method('execute')
-            ->with([1, '2017-01-01 00:00:00', 1, 0, 10, 10, 10, 10])
+            ->with([1, '2017-01-01 00:00:00', 1, 0, 10, 10, 10, 10, 3, 2, 1, 7, 8, 9, 100, 1000])
         ;
 
         $this->conn
@@ -146,6 +149,9 @@ class QueryBuilderTest extends TestCase
             ->where('p.id >= ?', 10)
             ->where('p.id IS NULL')
             ->where('p.id IS NOT NULL')
+            ->where('p.id IN ?', 3, 2, 1)
+            ->where('p.id NOT IN ?', 7, 8, 9)
+            ->where('p.id BETWEEN ? AND ?', 100, 1000)
             ->fetchOne()
         ;
     }

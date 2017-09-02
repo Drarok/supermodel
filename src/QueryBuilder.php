@@ -77,9 +77,9 @@ class QueryBuilder
         return $this;
     }
 
-    public function where(string $clause, $value = null): QueryBuilder
+    public function where(string $clause, ...$values): QueryBuilder
     {
-        $this->where[] = new QueryBuilderClause($clause, $value);
+        $this->where[] = new QueryBuilderClause($clause, ...$values);
         return $this;
     }
 
@@ -180,15 +180,17 @@ class QueryBuilder
             $alias = $clause->getAlias();
             $modelTransformers = $transformers[$alias];
 
-            $value = $clause->getValue();
+            $values = $clause->getValues();
 
-            /** @var TransformerInterface $t */
-            if ($value !== null && ($t = $modelTransformers[$clause->getColumn()] ?? null)) {
-                $value = $t::toArray($value);
-            }
+            foreach ($values as $value) {
+                /** @var TransformerInterface $t */
+                if ($value !== null && ($t = $modelTransformers[$clause->getColumn()] ?? null)) {
+                    $value = $t::toArray($value);
+                }
 
-            if ($value !== null) {
-                $params[] = $value;
+                if ($value !== null) {
+                    $params[] = $value;
+                }
             }
         }
 
@@ -231,7 +233,7 @@ class QueryBuilder
 
         if (count($this->orderBy) > 0) {
             $map = function (QueryBuilderClause $clause) {
-                return $clause->toString() . ' ' . $clause->getValue();
+                return $clause->toString() . ' ' . $clause->getValues()[0];
             };
 
             $sql .= ' ORDER BY ' . implode(', ', array_map($map, $this->orderBy));
