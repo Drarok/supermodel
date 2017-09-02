@@ -10,6 +10,7 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\RelationInterface;
+use Zerifas\Supermodel\Transformers\TransformerInterface;
 
 class QueryBuilder
 {
@@ -145,11 +146,59 @@ class QueryBuilder
      */
     private function execute(): PDOStatement
     {
-        $table = $this->metadata->getTableName($this->model);
+        $sql = $this->generateSQL();
+        $stmt = $this->conn->prepare($sql);
 
-        $models = [
-            $this->alias => $this->model,
+        $params = $this->getParams();
+
+        if (count($params) > 0) {
+            $stmt->execute($params);
+        } else {
+            $stmt->execute();
+        }
+
+        return $stmt;
+    }
+
+    private function getParams()
+    {
+        $params = [];
+
+        $transformers = [
+            $this->alias => $this->metadata->getValueTransformers($this->model),
         ];
+
+        $relations = $this->metadata->getRelations($this->model);
+
+        foreach ($this->joins as $name => $alias) {
+            $relation = $relations[$name];
+            $model = $relation->getModel();
+            $transformers[$alias] = $this->metadata->getValueTransformers($model);
+        }
+
+        foreach ($this->where as $clause) {
+            $alias = $clause->getAlias();
+            $modelTransformers = $transformers[$alias];
+
+            $value = $clause->getValue();
+
+            /** @var TransformerInterface $t */
+            if ($value !== null && ($t = $modelTransformers[$clause->getColumn()] ?? null)) {
+                $value = $t::toArray($value);
+            }
+
+            if ($value !== null) {
+                $params[] = $value;
+            }
+        }
+
+        return $params;
+    }
+
+
+    private function generateSQL(): string
+    {
+        $table = $this->metadata->getTableName($this->model);
 
         $sql = "SELECT * FROM `$table` AS `$this->alias`";
 
@@ -158,7 +207,11 @@ class QueryBuilder
         foreach ($this->joins as $name => $joinAlias) {
             $relation = $relations[$name];
 
-            $models[$joinAlias] = $joinModel = $relation->getModel();
+            if (!($relation instanceof BelongsToRelation)) {
+                continue;
+            }
+
+            $joinModel = $relation->getModel();
             $foreignColumn = $relation->getForeignColumn();
             $localColumn = $relation->getLocalColumn();
 
@@ -168,25 +221,7 @@ class QueryBuilder
                 "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
         }
 
-        // TODO: Less looping and fetching of transformers.
-        $params = [];
         if (count($this->where) > 0) {
-            foreach ($this->where as $idx => $clause) {
-                $model = $models[$clause->getAlias()];
-
-                $transformers = $this->metadata->getValueTransformers($model);
-                $value = $clause->getValue();
-
-                if ($value !== null && ($transformer = $transformers[$clause->getColumn()] ?? null)) {
-                    $value = $transformer::toArray($value);
-                }
-
-                if ($value !== null) {
-                    $params[] = $value;
-                }
-
-            }
-
             $map = function (QueryBuilderClause $clause) {
                 return $clause->toString();
             };
@@ -210,14 +245,6 @@ class QueryBuilder
             }
         }
 
-        $stmt = $this->conn->prepare($sql);
-
-        if (count($params) > 0) {
-            $stmt->execute($params);
-        } else {
-            $stmt->execute();
-        }
-
-        return $stmt;
+        return $sql;
     }
 }

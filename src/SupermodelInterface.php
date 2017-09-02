@@ -22,14 +22,14 @@ interface SupermodelInterface
     public static function getColumns(): array;
 
     /**
-     * Get relations
+     * Get relations, keyed on name
      *
      * @return AbstractRelation[]
      */
     public static function getRelations(): array;
 
     /**
-     * Get value transformers
+     * Get value transformers, keyed on column name
      *
      * @return TransformerInterface[]
      */
