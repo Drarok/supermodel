@@ -210,7 +210,7 @@ class QueryBuilderTest extends TestCase
         iterator_count($result);
     }
 
-    public function testHasManyRelation()
+    public function testHasManyRelationFetchOne()
     {
         $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
             . 'LEFT OUTER JOIN `posts` AS `up` ON `up`.`userId` = `u`.`id` '
@@ -264,7 +264,7 @@ class QueryBuilderTest extends TestCase
         ;
 
         /** @var UserModel $result */
-        $result  = (new QueryBuilder($this->conn, UserModel::class, 'u'))
+        $result = (new QueryBuilder($this->conn, UserModel::class, 'u'))
             ->join('userPosts', 'up')
             ->where('u.enabled = ?', true)
             ->fetchOne()
@@ -279,4 +279,82 @@ class QueryBuilderTest extends TestCase
         $postIds = array_map($map, $result->getUserPosts());
         $this->assertEquals([3, 5], $postIds);
     }
+
+    public function testHasManyRelationFetchAll()
+    {
+        $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
+            . 'LEFT OUTER JOIN `posts` AS `up` ON `up`.`userId` = `u`.`id` '
+            . 'WHERE `u`.`enabled` = ? '
+            . 'GROUP BY `u`.`id`'
+        ;
+
+        $sql2 = 'SELECT `userPosts`.* FROM `posts` AS `userPosts` WHERE `userPosts`.`id` IN (?, ?, ?)';
+
+        $users = [
+            [
+                'u.id' => 1,
+                'u.username' => 'drarok',
+                'u.enabled' => 1,
+                'userPosts' => '3,5',
+            ],
+            [
+                'u.id' => 2,
+                'u.username' => 'jen',
+                'u.enabled' => 1,
+                'userPosts' => '5,6',
+            ],
+        ];
+
+        $posts = [
+            ['userPosts.id' => 3],
+            ['userPosts.id' => 5],
+            ['userPosts.id' => 6],
+        ];
+
+        $stmt1 = $this->createMock('PDOStatement');
+        $stmt1->expects($this->once())
+            ->method('execute')
+            ->with([1])
+        ;
+        $stmt1->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn($users)
+        ;
+
+        $stmt2 = $this->createMock('PDOStatement');
+        $stmt2->expects($this->once())
+            ->method('execute')
+            ->with([3, 5, 6])
+        ;
+        $stmt2->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn($posts)
+        ;
+
+        $this->conn
+            ->expects($this->exactly(2))
+            ->method('prepare')
+            ->withConsecutive([$sql1], [$sql2])
+            ->willReturnOnConsecutiveCalls($stmt1, $stmt2)
+        ;
+
+        $result = (new QueryBuilder($this->conn, UserModel::class, 'u'))
+            ->join('userPosts', 'up')
+            ->where('u.enabled = ?', true)
+            ->fetchAll()
+        ;
+
+        /** @var UserModel[] $actualUsers */
+        $actualUsers = iterator_to_array($result);
+
+//        $this->assertCount(2, $actualUsers);
+//        $this->assertInstanceOf(UserModel::class, $result[0]);
+//
+//        $map = function (PostModel $post) {
+//            return $post->getId();
+//        };
+//        $postIds = array_map($map, $result->getUserPosts());
+//        $this->assertEquals([3, 5], $postIds);
+    }
+
 }

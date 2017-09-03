@@ -2,6 +2,7 @@
 
 namespace Zerifas\Supermodel;
 
+use ArrayObject;
 use Generator;
 use InvalidArgumentException;
 use PDOStatement;
@@ -127,16 +128,49 @@ class QueryBuilder
     /**
      * Execute the query, and get a Generator returning model objects.
      *
-     * @return Generator
+     * @return Generator|false
      */
     public function fetchAll(): Generator
     {
+        $relatedCache = [];
+
         $stmt = $this->execute();
+        $rows = $stmt->fetchAll();
 
-        // TODO: Pre-fetch all the related items here!
+        $relations = $this->metadata->getRelations($this->model);
+        $filter = function ($name) use ($relations) {
+            return $relations[$name] instanceof HasManyRelation;
+        };
+        $hasManyJoins = array_filter($this->joins, $filter, ARRAY_FILTER_USE_KEY);
 
-        while (($row = $stmt->fetch())) {
-            yield $this->createInstance($row);
+        if (count($hasManyJoins) > 0) {
+            foreach ($hasManyJoins as $name => $alias) {
+                $relatedCache[$name] = [];
+                $ids = [];
+
+                $relation = $relations[$name];
+
+
+                foreach ($rows as $row) {
+                    $rowIds = array_map('intval', explode(',', $row[$name] ?? ''));
+                    foreach ($rowIds as $id) {
+                        $ids[$id] = true;
+                    }
+                }
+
+                $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
+                    ->where($name . '.id IN ?', ...array_keys($ids))
+                    ->fetchAll()
+                ;
+
+                foreach ($objects as $obj) {
+                    $relatedCache[$name][$obj->getId()] = $obj;
+                }
+            }
+        }
+
+        foreach ($rows as $row) {
+            yield $this->createInstance($row, $relatedCache);
         }
     }
 
@@ -273,10 +307,11 @@ class QueryBuilder
      * Pre-transform HasManyRelation data into objects.
      *
      * @param array $data Raw data to create objects from
+     * @param array $relatedCache Optional cache of related objects
      *
      * @return Model
      */
-    private function createInstance(array $data): Model
+    private function createInstance(array $data, array $relatedCache = []): Model
     {
         $relations = $this->metadata->getRelations($this->model);
 
@@ -287,14 +322,33 @@ class QueryBuilder
                 continue;
             }
 
+            // Get an array of ids we need for this instance.
             $foreignIds = array_map('intval', explode(',', $data[$name]));
 
-            $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
-                ->where($name . '.id IN ?', ...$foreignIds)
-                ->fetchAll()
-            ;
+            // Don't hit the database for objects we have in the cache.
+            $found = [];
+            foreach ($foreignIds as $id) {
+                if (isset($relatedCache[$name][$id])) {
+                    $found[$id] = $relatedCache[$name][$id];
+                }
+            }
+            $foreignIds = array_filter($foreignIds, function (int $id) use ($found) {
+                return !isset($found[$id]);
+            });
 
-            $data[$name] = iterator_to_array($objects);
+            // We can't currently back-fill a partially-filled cache.
+            if (count($found) > 0 && count($foreignIds) > 0) {
+                throw new InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name");
+            }
+
+            if (count($found) > 0) {
+                $data[$name] = array_values($found);
+            } elseif (count($foreignIds)) {
+                $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
+                    ->where($name . '.id IN ?', ...$foreignIds)
+                    ->fetchAll();
+                $data[$name] = iterator_to_array($objects);
+            }
         }
 
         /** @var Model $class */
