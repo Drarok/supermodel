@@ -21,6 +21,6 @@ class QueryBuilderClauseTest extends TestCase
 
         $this->assertEquals('p', $clause->getAlias());
         $this->assertEquals('id', $clause->getColumn());
-        $this->assertEquals(15, $clause->getValue());
+        $this->assertEquals([15], $clause->getValues());
     }
 }
