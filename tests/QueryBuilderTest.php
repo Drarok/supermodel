@@ -46,14 +46,11 @@ class QueryBuilderTest extends TestCase
         $sql = 'SELECT `p`.* FROM `posts` AS `p`';
 
         $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->exactly(2))
-            ->method('fetch')
-            ->willReturn(
-                [
-                    'p.id' => 10,
-                ],
-                false
-            )
+        $stmt->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn([
+                ['p.id' => 10]
+            ])
         ;
 
         $this->conn
@@ -251,9 +248,9 @@ class QueryBuilderTest extends TestCase
             ->method('execute')
             ->with([3, 5])
         ;
-        $stmt2->expects($this->exactly(3))
-            ->method('fetch')
-            ->willReturnOnConsecutiveCalls($data2, $data3, false)
+        $stmt2->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn([$data2, $data3])
         ;
 
         $this->conn

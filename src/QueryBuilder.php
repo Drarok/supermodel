@@ -169,8 +169,13 @@ class QueryBuilder
             }
         }
 
-        foreach ($rows as $row) {
-            yield $this->createInstance($row, $relatedCache);
+        if (!$rows) {
+            yield;
+        } else {
+            foreach ($rows as $row) {
+                yield $this->createInstance($row, $relatedCache);
+
+            }
         }
     }
 
