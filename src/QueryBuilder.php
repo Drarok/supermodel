@@ -130,12 +130,10 @@ class QueryBuilder
      */
     public function fetchAll(): Generator
     {
-        $relatedCache = [];
-
         $stmt = $this->execute();
         $rows = $stmt->fetchAll();
 
-        if (!$rows) {
+        if ($rows === false) {
             throw new \UnexpectedValueException('Failed to execute query!');
         }
 
