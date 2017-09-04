@@ -31,9 +31,6 @@
   <filter>
     <whitelist processUncoveredFilesFromWhitelist="true">
       <directory suffix=".php">src</directory>
-      <exclude>
-        <file>src/AutoAccessorsTrait.php</file>
-      </exclude>
     </whitelist>
   </filter>
 

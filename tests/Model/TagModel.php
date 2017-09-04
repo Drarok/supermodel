@@ -35,7 +35,6 @@ class TagModel extends Model
     {
         return [
             'posts' => new ManyToManyRelation(PostModel::class, 'posts_tags', 'tagId', 'postId'),
-            'invalid' => new class {},
         ];
     }
 }

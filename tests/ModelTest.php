@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Metadata\MetadataCache;
+use Zerifas\Supermodel\Test\Model\InvalidModel;
 use Zerifas\Supermodel\Test\Model\PostModel;
 use Zerifas\Supermodel\Test\Model\UserModel;
 
@@ -25,21 +26,21 @@ class ModelTest extends TestCase
         $this->metadata = new MetadataCache(new MemoryCache());
     }
 
-    public function testCreateWithoutRelations()
+    public function testSimpleCreate()
     {
         $date = '2016-01-01 00:00:00';
 
         $data = [
-            'posts.id' => 1,
-            'posts.createdAt' => $date,
-            'posts.updatedAt' => $date,
-            'posts.userId' => 1,
-            'posts.title' => 'This is a title',
-            'posts.body' => 'This is a body',
-            'posts.enabled' => 1,
+            'p.id' => 1,
+            'p.createdAt' => $date,
+            'p.updatedAt' => $date,
+            'p.userId' => 1,
+            'p.title' => 'This is a title',
+            'p.body' => 'This is a body',
+            'p.enabled' => 1,
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
+        $obj = PostModel::createFromArray($data, $this->metadata, 'p');
 
         $this->assertAttributeEquals(1, 'id', $obj);
         $this->assertAttributeEquals(DateTime::createFromFormat('Y-m-d H:i:s', $date), 'createdAt', $obj);
@@ -47,72 +48,56 @@ class ModelTest extends TestCase
         $this->assertEquals('This is a title', $obj->getTitle());
     }
 
-    public function testCreateWithSingleRelation()
+    public function testSimpleCreateWithInvalidRelation()
+    {
+        $this->expectExceptionMessage('Relation invalid is invalid in Zerifas\\Supermodel\\Test\\Model\\InvalidModel');
+        InvalidModel::createFromArray([], $this->metadata, 'p');
+    }
+
+    public function testCreateWithBelongsToRelation()
     {
         $date = '2016-01-01 00:00:00';
 
         $data = [
-            'posts.id' => 1,
-            'posts.createdAt' => $date,
-            'posts.updatedAt' => $date,
-            'posts.userId' => 1,
-            'posts.title' => 'This is a title',
-            'posts.body' => 'This is a body',
-            'posts.enabled' => 1,
+            'p.id' => 1,
+            'p.createdAt' => $date,
+            'p.updatedAt' => $date,
+            'p.userId' => 1,
+            'p.title' => 'This is a title',
+            'p.body' => 'This is a body',
+            'p.enabled' => 1,
 
             'user.id' => 2,
             'user.username' => 'drarok',
             'user.enabled' => 1,
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
+        /** @var PostModel $post */
+        $post = PostModel::createFromArray($data, $this->metadata, 'p');
 
-        $this->assertEquals('This is a title', $obj->getTitle());
+        $this->assertEquals('This is a title', $post->getTitle());
 
-        $user = $obj->getUser();
+        $user = $post->getUser();
         $this->assertInstanceOf(UserModel::class, $user);
         $this->assertAttributeEquals(2, 'id', $user);
         $this->assertAttributeEquals('drarok', 'username', $user);
         $this->assertAttributeEquals(true, 'enabled', $user);
     }
 
-    public function testCreateWithManyRelations()
+    public function testCreateWithHasManyRelation()
     {
         $date = '2016-01-01 00:00:00';
 
         $data = [
-            'posts.id' => 1,
-            'posts.createdAt' => $date,
-            'posts.updatedAt' => $date,
-            'posts.userId' => 1,
-            'posts.title' => 'This is a title',
-            'posts.body' => 'This is a body',
-            'posts.enabled' => 1,
-
-            'author.id' => 5,
-            'author.username' => 'alice',
-            'author.enabled' => 0,
-
-            'user.id' => 2,
-            'user.username' => 'drarok',
-            'user.enabled' => 1,
+            'u.id' => 1,
+            'userPosts' => [new PostModel(), new PostModel()],
         ];
 
-        $obj = PostModel::createFromArray($data, $this->metadata, 'posts');
+        $user = UserModel::createFromArray($data, $this->metadata, 'u');
 
-        $this->assertEquals('This is a title', $obj->getTitle());
+        $this->assertEquals(1, $user->getId());
 
-        $author = $obj->getAuthor();
-        $this->assertInstanceOf(UserModel::class, $author);
-        $this->assertAttributeEquals(5, 'id', $author);
-        $this->assertAttributeEquals('alice', 'username', $author);
-        $this->assertAttributeEquals(false, 'enabled', $author);
-
-        $user = $obj->getUser();
-        $this->assertInstanceOf(UserModel::class, $user);
-        $this->assertAttributeEquals(2, 'id', $user);
-        $this->assertAttributeEquals('drarok', 'username', $user);
-        $this->assertAttributeEquals(true, 'enabled', $user);
+        $this->assertCount(2, $user->getUserPosts());
     }
 
     public function testToArray()

@@ -54,4 +54,9 @@ class PostModel extends TimestampedModel
             'enabled' => BooleanTransformer::class,
         ]);
     }
+
+    public function getUser()
+    {
+        return $this->user;
+    }
 }
