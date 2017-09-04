@@ -86,17 +86,14 @@ class ModelTest extends TestCase
 
     public function testCreateWithHasManyRelation()
     {
-        $date = '2016-01-01 00:00:00';
-
         $data = [
             'u.id' => 1,
-            'userPosts' => [new PostModel(), new PostModel()],
+            '.userPosts' => [new PostModel(), new PostModel()],
         ];
 
         $user = UserModel::createFromArray($data, $this->metadata, 'u');
 
         $this->assertEquals(1, $user->getId());
-
         $this->assertCount(2, $user->getUserPosts());
     }
 

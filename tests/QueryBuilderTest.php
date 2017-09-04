@@ -31,6 +31,7 @@ class QueryBuilderTest extends TestCase
         /** @var PHPUnit_Framework_MockObject_MockObject $mockConn */
         $mockConn = $this->createMock(Connection::class);
         $mockConn
+            ->expects($this->any())
             ->method('getMetadata')
             ->willReturn(new MetadataCache(new MemoryCache()));
 
@@ -40,110 +41,96 @@ class QueryBuilderTest extends TestCase
 
     public function testSimpleQuery()
     {
-        $sql = 'SELECT `p`.* FROM `posts` AS `p`';
+        $sql = [];
+        $params = [];
+        $data = [];
 
-        $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn([
-                ['p.id' => 10]
-            ])
-        ;
+        $sql[] = 'SELECT `posts`.* FROM `posts` WHERE `posts`.`id` > ?';
+        $params[] = [0];
+        $data[] = [
+            ['p.id' => 10]
+        ];
 
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt)
-        ;
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
         $result = $this->qb
+            ->where('p.id > ?', 0)
             ->fetchAll()
         ;
-
-        $count = 0;
-        foreach ($result as $post) {
-            $this->assertEquals(10, $post->getId());
-            ++$count;
-        }
-        $this->assertEquals(1, $count);
+        iterator_count($result);
     }
 
     public function testSimpleJoinQuery()
     {
-        $sql = implode(' ', [
-            'SELECT `p`.* FROM `posts` AS `p`',
-            'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
-            'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
-            'WHERE `p`.`id` = ?',
-            'LIMIT 1',
-        ]);
+        $sql = [];
+        $params = [];
+        $data = [];
 
-        $row = [
-            'p.id' => 1,
-            'a.id' => 2,
-            'u.id' => 3,
+        $sql[] = implode(' ', [
+            'SELECT `posts`.*, `author`.*, `user`.* FROM `posts`',
+            'INNER JOIN `users` AS `author` ON `author`.`id` = `posts`.`authorId`',
+            'INNER JOIN `users` AS `user` ON `user`.`id` = `posts`.`userId`',
+            'WHERE `posts`.`id` > ?',
+        ]);
+        $params[] = [0];
+
+        $data[] = [
+            [
+                'posts.id' => 1,
+                'posts.authorId' => 2,
+                'posts.userId' => 3,
+
+                'author.id' => 2,
+
+                'user.id' => 3,
+            ],
         ];
 
-        $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->once())
-            ->method('fetch')
-            ->willReturn($row)
-        ;
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt)
-        ;
-
-        $this->qb
+        $results = $this->qb
             ->join('author', 'a')
             ->join('user', 'u')
-            ->byId(10)
-            ->fetchOne()
+            ->where('p.id > ?', 0)
+            ->fetchAll()
         ;
+
+        iterator_count($results);
     }
 
     public function testJoinWithWhereQuery()
     {
-        $sql = implode(' ', [
-            'SELECT `p`.* FROM `posts` AS `p`',
-            'INNER JOIN `users` AS `a` ON `a`.`id` = `p`.`authorId`',
-            'INNER JOIN `users` AS `u` ON `u`.`id` = `p`.`userId`',
-            'WHERE `p`.`id` = ?',
-            'AND `p`.`createdAt` > ?',
-            'AND `a`.`enabled` = ?',
-            'AND `u`.`enabled` != ?',
-            'AND `p`.`id` < ?',
-            'AND `p`.`id` > ?',
-            'AND `p`.`id` <= ?',
-            'AND `p`.`id` >= ?',
-            'AND `p`.`id` IS NULL',
-            'AND `p`.`id` IS NOT NULL',
-            'AND `p`.`id` IN (?, ?, ?)',
-            'AND `p`.`id` NOT IN (?, ?, ?)',
-            'AND `p`.`id` BETWEEN ? AND ?',
-            'LIMIT 1',
+        $sql = [];
+        $params = [];
+        $data = [];
+
+        $format = 'Y-m-d H:i:s';
+        $datetime = \DateTime::createFromFormat($format, '2017-01-01 00:00:00');
+
+        $sql[] = implode(' ', [
+            'SELECT `posts`.*, `author`.*, `user`.* FROM `posts`',
+            'INNER JOIN `users` AS `author` ON `author`.`id` = `posts`.`authorId`',
+            'INNER JOIN `users` AS `user` ON `user`.`id` = `posts`.`userId`',
+            'WHERE `posts`.`id` = ?',
+            'AND `posts`.`createdAt` > ?',
+            'AND `author`.`enabled` = ?',
+            'AND `user`.`enabled` != ?',
+            'AND `posts`.`id` < ?',
+            'AND `posts`.`id` > ?',
+            'AND `posts`.`id` <= ?',
+            'AND `posts`.`id` >= ?',
+            'AND `posts`.`id` IS NULL',
+            'AND `posts`.`id` IS NOT NULL',
+            'AND `posts`.`id` IN (?, ?, ?)',
+            'AND `posts`.`id` NOT IN (?, ?, ?)',
+            'AND `posts`.`id` BETWEEN ? AND ?',
         ]);
+        $params[] = [1, $datetime->format($format), 1, 0, 10, 10, 10, 10, 3, 2, 1, 7, 8, 9, 100, 1000];
+        $data[] = [];
 
-        $datetime = \DateTime::createFromFormat('Y-m-d H:i:s', '2017-01-01 00:00:00');
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
-        $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->once())
-            ->method('execute')
-            ->with([1, '2017-01-01 00:00:00', 1, 0, 10, 10, 10, 10, 3, 2, 1, 7, 8, 9, 100, 1000])
-        ;
-
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt)
-        ;
-
-        $this->qb
+        $results = $this->qb
             ->join('author', 'a')
             ->join('user', 'u')
             ->where('p.id = ?', 1)
@@ -159,8 +146,9 @@ class QueryBuilderTest extends TestCase
             ->where('p.id IN ?', 3, 2, 1)
             ->where('p.id NOT IN ?', 7, 8, 9)
             ->where('p.id BETWEEN ? AND ?', 100, 1000)
-            ->fetchOne()
+            ->fetchAll()
         ;
+        iterator_count($results);
     }
 
     public function testJoinFailsWithInvalidRelationName()
@@ -177,55 +165,46 @@ class QueryBuilderTest extends TestCase
 
     public function testOrderBy()
     {
-        $sql = 'SELECT `p`.* FROM `posts` AS `p` '
-            . 'WHERE `p`.`id` = ? '
-            . 'ORDER BY `p`.`createdAt` DESC LIMIT 1';
+        $sql = [];
+        $params = [];
+        $data = [];
 
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn(new \PDOStatement())
-        ;
+        $sql[] = 'SELECT `posts`.* FROM `posts` '
+            . 'WHERE `posts`.`id` > ? '
+            . 'ORDER BY `posts`.`createdAt` DESC';
+        $params[] = [10];
+        $data[] = [];
 
-        $this->qb
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
+
+        $results = $this->qb
             ->orderBy('p.createdAt', 'DESC')
-            ->byId(10)
-            ->fetchOne()
+            ->where('p.id > ?',10)
+            ->fetchAll()
         ;
+        iterator_count($results);
     }
 
     public function testLimitAndOffset()
     {
-        $sql = 'SELECT `p`.* FROM `posts` AS `p` LIMIT 10 OFFSET 15';
+        $sql = [];
+        $params = [];
+        $data = [];
 
-        $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->once())
-            ->method('execute')
-            ->willReturn(true)
-        ;
-        $stmt->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn([
-                ['p.id' => 1],
-            ])
-        ;
+        $sql[] = 'SELECT `posts`.* FROM `posts` LIMIT 10 OFFSET 15';
+        $params[] = null;
+        $data[] = [
+            ['posts.id' => 1],
+        ];
 
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt)
-        ;
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
-        $result = $this->qb
+        $results = $this->qb
             ->limit(10)
             ->offset(15)
             ->fetchAll()
         ;
-
-        // Force the Generator to run.
-        iterator_count($result);
+        iterator_count($results);
     }
 
     public function testInvalidQuery()
@@ -247,133 +226,35 @@ class QueryBuilderTest extends TestCase
         iterator_count($this->qb->fetchAll());
     }
 
-    public function testHasManyRelationFetchOne()
+    public function testHasManyRelation()
     {
-        $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
-            . 'LEFT OUTER JOIN `posts` AS `up` ON `up`.`userId` = `u`.`id` '
-            . 'WHERE `u`.`enabled` = ? '
-            . 'GROUP BY `u`.`id` '
-            . 'LIMIT 1'
+        $sql = [];
+        $params = [];
+        $data = [];
+
+        $sql[] = 'SELECT `users`.*, GROUP_CONCAT(`userPosts`.`id`) AS `userPosts` FROM `users` '
+            . 'LEFT OUTER JOIN `posts` AS `userPosts` ON `userPosts`.`userId` = `users`.`id` '
+            . 'WHERE `users`.`enabled` = ? '
+            . 'GROUP BY `users`.`id`'
         ;
-
-        $sql2 = 'SELECT `up`.* FROM `posts` AS `up` WHERE `up`.`id` IN (?, ?)';
-
-        $data1 = [
-            'u.id' => 1,
-            'u.username' => 'drarok',
-            'u.enabled' => 1,
-            'userPosts' => '3,5',
-        ];
-
-        $data2 = [
-            'up.id' => 3,
-        ];
-
-        $data3 = [
-            'up.id' => 5,
-        ];
-
-        $stmt1 = $this->createMock('PDOStatement');
-        $stmt1->expects($this->once())
-            ->method('execute')
-            ->with([1])
-        ;
-        $stmt1->expects($this->once())
-            ->method('fetch')
-            ->willReturn($data1)
-        ;
-
-        $stmt2 = $this->createMock('PDOStatement');
-        $stmt2->expects($this->once())
-            ->method('execute')
-            ->with([3, 5])
-        ;
-        $stmt2->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn([$data2, $data3])
-        ;
-
-        $this->conn
-            ->expects($this->exactly(2))
-            ->method('prepare')
-            ->withConsecutive([$sql1], [$sql2])
-            ->willReturnOnConsecutiveCalls($stmt1, $stmt2)
-        ;
-
-        /** @var UserModel $result */
-        $result = (new QueryBuilder($this->conn, UserModel::class, 'u'))
-            ->join('userPosts', 'up')
-            ->where('u.enabled = ?', true)
-            ->fetchOne()
-        ;
-
-        $this->assertInstanceOf(UserModel::class, $result);
-        $this->assertCount(2, $result->getUserPosts());
-
-        $map = function (PostModel $post) {
-            return $post->getId();
-        };
-        $postIds = array_map($map, $result->getUserPosts());
-        $this->assertEquals([3, 5], $postIds);
-    }
-
-    public function testHasManyRelationFetchAll()
-    {
-        $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
-            . 'LEFT OUTER JOIN `posts` AS `up` ON `up`.`userId` = `u`.`id` '
-            . 'WHERE `u`.`enabled` = ? '
-            . 'GROUP BY `u`.`id`'
-        ;
-
-        $sql2 = 'SELECT `up`.* FROM `posts` AS `up` WHERE `up`.`id` IN (?, ?, ?)';
-
-        $users = [
+        $params[] = [1];
+        $data[] = [
             [
-                'u.id' => 1,
-                'u.username' => 'drarok',
-                'u.enabled' => 1,
-                'userPosts' => '3,5',
-            ],
-            [
-                'u.id' => 2,
-                'u.username' => 'jen',
-                'u.enabled' => 1,
-                'userPosts' => '5,6',
-            ],
+                'users.id' => 1,
+                'users.username' => 'drarok',
+                'users.enabled' => 1,
+                '.userPosts' => '3,5',
+            ]
         ];
 
-        $posts = [
-            ['up.id' => 3],
-            ['up.id' => 5],
-            ['up.id' => 6],
+        $sql[] = 'SELECT `posts`.* FROM `posts` WHERE `posts`.`id` IN (?, ?)';
+        $params[] = [3, 5];
+        $data[] = [
+            ['posts.id' => 3],
+            ['posts.id' => 5],
         ];
 
-        $stmt1 = $this->createMock('PDOStatement');
-        $stmt1->expects($this->once())
-            ->method('execute')
-            ->with([1])
-        ;
-        $stmt1->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn($users)
-        ;
-
-        $stmt2 = $this->createMock('PDOStatement');
-        $stmt2->expects($this->once())
-            ->method('execute')
-            ->with([3, 5, 6])
-        ;
-        $stmt2->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn($posts)
-        ;
-
-        $this->conn
-            ->expects($this->exactly(2))
-            ->method('prepare')
-            ->withConsecutive([$sql1], [$sql2])
-            ->willReturnOnConsecutiveCalls($stmt1, $stmt2)
-        ;
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
         $result = (new QueryBuilder($this->conn, UserModel::class, 'u'))
             ->join('userPosts', 'up')
@@ -381,17 +262,7 @@ class QueryBuilderTest extends TestCase
             ->fetchAll()
         ;
 
-        /** @var UserModel[] $actualUsers */
-        $actualUsers = iterator_to_array($result);
-
-        $this->assertCount(2, $actualUsers);
-//        $this->assertInstanceOf(UserModel::class, $result[0]);
-//
-//        $map = function (PostModel $post) {
-//            return $post->getId();
-//        };
-//        $postIds = array_map($map, $result->getUserPosts());
-//        $this->assertEquals([3, 5], $postIds);
+        iterator_count($result);
     }
 
     public function testManyToManyJoin()
@@ -401,51 +272,49 @@ class QueryBuilderTest extends TestCase
         $data = [];
 
         $sql[] = implode(' ', [
-            'SELECT `p`.*, GROUP_CONCAT(`t`.`id`) AS `tags` FROM `posts` AS `p`',
-            'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `p`.`id`',
-            'LEFT OUTER JOIN `tags` AS `t` ON `t`.`id` = `posts_tags`.`tagId`',
-            'GROUP BY `p`.`id`',
+            'SELECT `posts`.*, GROUP_CONCAT(`tags`.`id`) AS `tags` FROM `posts`',
+            'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `posts`.`id`',
+            'LEFT OUTER JOIN `tags` AS `tags` ON `tags`.`id` = `posts_tags`.`tagId`',
+            'GROUP BY `posts`.`id`',
         ]);
         $params[] = null;
         $data[] = [
             [
-                'p.id' => 1,
-                'p.createdAt' => '2017-09-04 14:40:02',
-                'p.updatedAt' => '2017-09-04 14:40:02',
-                'p.authorId' => 1,
-                'p.userId' => 2,
-                'p.title' => 'Post title 1',
-                'p.body' => 'Post body 1',
-                'tags' => '1,2',
+                'posts.id' => 1,
+                'posts.createdAt' => '2017-09-04 14:40:02',
+                'posts.updatedAt' => '2017-09-04 14:40:02',
+                'posts.authorId' => 1,
+                'posts.userId' => 2,
+                'posts.title' => 'Post title 1',
+                'posts.body' => 'Post body 1',
+                '.tags' => '1,2',
             ],
         ];
 
 
         $sql[] = implode(' ', [
-            'SELECT `t`.* FROM `tags` AS `t` WHERE `t`.`id` IN (?, ?)',
+            'SELECT `tags`.* FROM `tags` WHERE `tags`.`id` IN (?, ?)',
         ]);
         $params[] = [1, 2];
         $data[] = [
             [
-                't.id' => 1,
-                't.name' => 'tag1',
+                'tags.id' => 1,
+                'tags.name' => 'tag1',
             ],
             [
-                't.id' => 2,
-                't.name' => 'tag2',
+                'tags.id' => 2,
+                'tags.name' => 'tag2',
             ],
         ];
 
         $this->expectSQLWithParamsToReturnData($sql, $params, $data);
 
-        $posts = (new QueryBuilder($this->conn, PostModel::class, 'p'))
+        $results = (new QueryBuilder($this->conn, PostModel::class, 'p'))
             ->join('tags', 't')
             ->fetchAll()
         ;
 
-        foreach ($posts as $post) {
-            $this->assertCount(2, $post->getTags());
-        }
+        iterator_count($results);
     }
 
     private function expectSQLWithParamsToReturnData(array $sql, array $params, array $data)
