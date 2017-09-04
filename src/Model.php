@@ -13,16 +13,20 @@ abstract class Model implements SupermodelInterface
 {
     protected $id;
 
-    public static function createFromArray(array $data, MetadataCache $metadata, string $alias): self
+    public static function createFromArray(array $data, MetadataCache $metadata, string $alias = null): self
     {
         $obj = new static();
 
         $columns = $metadata->getColumns(static::class);
         $transformers = $metadata->getValueTransformers(static::class);
 
+        if ($alias === null) {
+            $alias = $metadata->getTableName(static::class);
+        }
+
         /** @var string $column */
         foreach ($columns as $column) {
-            $value = $data[$alias . '.' . $column] ?? null;
+            $value = $data["$alias.$column"] ?? null;
 
             /** @var TransformerInterface $transformer */
             if ($value !== null && ($transformer = $transformers[$column] ?? null)) {
@@ -42,12 +46,12 @@ abstract class Model implements SupermodelInterface
             $joinModel = $relation->getModel();
             $foreignColumn = $relation->getForeignColumn();
 
-            if (!isset($data["$name.$foreignColumn"]) && !isset($data[$name])) {
+            if (!isset($data["$name.$foreignColumn"]) && !isset($data['.' . $name])) {
                 continue;
             }
 
             if ($relation instanceof HasManyRelation || $relation instanceof ManyToManyRelation) {
-                $obj->$name = $data[$name];
+                $obj->$name = $data['.' . $name];
             } elseif ($relation instanceof BelongsToRelation) {
                 if (!empty($data["$name.$foreignColumn"])) {
                     $obj->$name = $joinModel::createFromArray($data, $metadata, $name);

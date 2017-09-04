@@ -55,17 +55,17 @@ class UserModel extends Model
     }
 
     /**
-     * @return PostModel[]
+     * @return PostModel[]|null
      */
-    public function getUserPosts(): array
+    public function getUserPosts()
     {
         return $this->userPosts;
     }
 
     /**
-     * @return PostModel[]
+     * @return PostModel[]|null
      */
-    public function getAuthorPosts(): array
+    public function getAuthorPosts()
     {
         return $this->authorPosts;
     }

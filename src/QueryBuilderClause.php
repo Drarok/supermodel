@@ -26,13 +26,16 @@ class QueryBuilderClause
      */
     private $values;
 
-    public function __construct(string $clause, ...$values)
+    public function __construct(array $aliases, string $clause, ...$values)
     {
         if (!preg_match('/^([\w`-]+)\.([\w`-]+)(.*?)$/', $clause, $matches)) {
             throw new InvalidArgumentException("$clause is not in the format alias.column");
         }
 
-        $this->alias = trim($matches[1], '`');
+        // Get the name the user specified, map it back to the name used in the query.
+        $name = trim($matches[1], '`');
+        $this->alias = $aliases[$name];
+
         $this->column = trim($matches[2], '`');
         $this->suffix = trim($matches[3]);
 

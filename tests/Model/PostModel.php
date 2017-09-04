@@ -55,6 +55,9 @@ class PostModel extends TimestampedModel
         ]);
     }
 
+    /**
+     * @return UserModel|null
+     */
     public function getUser()
     {
         return $this->user;
