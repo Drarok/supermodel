@@ -18,12 +18,31 @@ class ConnectionTest extends TestCase
     {
         parent::setUp();
 
+        // TODO: Use mocks instead of a SQLite database.
         $this->conn = new Connection('sqlite::memory:', '', '', new MemoryCache());
-        $mock = $this->getMockBuilder(Connection::class)
-            ->setConstructorArgs(['sqlite::memory:', '', '', new MemoryCache()])
-            ->setMethods(null)
-            ->getMock()
-        ;
+
+        $sql = 'CREATE TABLE "tags" ("id" INTEGER PRIMARY KEY, "name" TEXT)';
+        $this->conn->prepare($sql)->execute();
+
+        $sql = 'INSERT INTO "tags" ("name") VALUES (?)';
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute(['tag1']);
+        $stmt->execute(['tag2']);
+        $stmt->execute(['tag3']);
+
+        $sql = 'CREATE TABLE "posts_tags" ("postId" INTEGER, "tagId" INTEGER)';
+        $this->conn->prepare($sql)->execute();
+
+        $sql = 'INSERT INTO "posts_tags" ("postId", "tagId") VALUES (?, ?)';
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([1, 1]);
+        $stmt->execute([1, 2]);
+
+        $sql = 'CREATE TABLE "users" (id INTEGER PRIMARY KEY, "username" TEXT)';
+        $this->conn->prepare($sql)->execute();
+
+        $sql = 'INSERT INTO "users" ("username") VALUES (?)';
+        $this->conn->prepare($sql)->execute(['drarok']);
 
         $create = implode(' ', [
             'CREATE TABLE "posts"',
@@ -50,20 +69,39 @@ class ConnectionTest extends TestCase
             '2016-01-01 00:00:00',
             '2016-01-01 00:00:00',
             1,
-            2,
+            1,
             'This is a sample title',
             'This is a sample body',
             1,
         ]);
     }
 
-    public function testFind()
+    public function testFindOne()
     {
         // This object won't contain any data because the SQLite driver doesn't support PDO::ATTR_FETCH_TABLE_NAMES
         $post = $this->conn->find(PostModel::class, 'p')
-            ->byId(1)
-            ->fetchOne()
-        ;
+            ->where('p.id > ?', 0)
+            ->fetchOne();
+
+        $this->assertNotFalse($post);
+        $this->assertInstanceOf(PostModel::class, $post);
+    }
+
+    public function testFindOneWithBelongsTo()
+    {
+        $post = $this->conn->find(PostModel::class, 'p')
+            ->join('user', 'u')
+            ->fetchOne();
+
+        $this->assertNotFalse($post);
+        $this->assertInstanceOf(PostModel::class, $post);
+    }
+
+    public function testFindOneWithHasMany()
+    {
+        $post = $this->conn->find(PostModel::class, 'p')
+            ->join('tags', 't')
+            ->fetchOne();
 
         $this->assertNotFalse($post);
         $this->assertInstanceOf(PostModel::class, $post);

@@ -374,7 +374,7 @@ class QueryBuilder
             }
 
             // Get an array of ids we need for this instance.
-            $ids = array_map('intval', explode(',', $data['.' . $name]));
+            $ids = array_map('intval', explode(',', $data['.' . $name] ?? ''));
 
             // Don't hit the database for objects we have in the cache.
             $objects = [];
