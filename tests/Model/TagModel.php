@@ -4,12 +4,14 @@ namespace Zerifas\Supermodel\Test\Model;
 
 use Zerifas\Supermodel\AutoAccessorsTrait;
 use Zerifas\Supermodel\Model;
+use Zerifas\Supermodel\Relation\ManyToManyRelation;
 
 class TagModel extends Model
 {
     use AutoAccessorsTrait;
 
     protected $name;
+    protected $posts;
 
     public static function getTableName(): string
     {
@@ -31,8 +33,9 @@ class TagModel extends Model
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            'posts' => new ManyToManyRelation(PostModel::class, 'posts_tags', 'tagId', 'postId'),
+            'invalid' => new class {},
+        ];
     }
-
-
 }

@@ -4,6 +4,7 @@ namespace Zerifas\Supermodel\Test\Model;
 
 use Zerifas\Supermodel\AutoAccessorsTrait;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
+use Zerifas\Supermodel\Relation\ManyToManyRelation;
 use Zerifas\Supermodel\TimestampedModel;
 use Zerifas\Supermodel\Transformers\BooleanTransformer;
 
@@ -15,10 +16,10 @@ class PostModel extends TimestampedModel
     protected $userId;
     protected $title;
     protected $body;
-    protected $enabled;
 
     protected $author;
     protected $user;
+    protected $tags;
 
     public static function getTableName(): string
     {
@@ -35,7 +36,6 @@ class PostModel extends TimestampedModel
             'userId',
             'title',
             'body',
-            'enabled',
         ];
     }
 
@@ -44,6 +44,7 @@ class PostModel extends TimestampedModel
         return [
             'author' => new BelongsToRelation(UserModel::class, 'authorId'),
             'user'   => new BelongsToRelation(UserModel::class, 'userId'),
+            'tags'   => new ManyToManyRelation(TagModel::class, 'posts_tags', 'postId', 'tagId'),
         ];
     }
 

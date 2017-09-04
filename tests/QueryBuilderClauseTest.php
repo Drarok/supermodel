@@ -23,4 +23,10 @@ class QueryBuilderClauseTest extends TestCase
         $this->assertEquals('id', $clause->getColumn());
         $this->assertEquals([15], $clause->getValues());
     }
+
+    public function testToString()
+    {
+        $clause = new QueryBuilderClause('p.id IN ?', 1, 2, 3);
+        $this->assertEquals('`p`.`id` IN (?, ?, ?)', $clause->toString());
+    }
 }

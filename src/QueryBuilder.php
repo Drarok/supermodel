@@ -2,16 +2,13 @@
 
 namespace Zerifas\Supermodel;
 
-use ArrayObject;
 use Generator;
-use InvalidArgumentException;
 use PDOStatement;
 
 use Zerifas\Supermodel\Metadata\MetadataCache;
-use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\HasManyRelation;
-use Zerifas\Supermodel\Relation\RelationInterface;
+use Zerifas\Supermodel\Relation\ManyToManyRelation;
 use Zerifas\Supermodel\Transformers\TransformerInterface;
 
 class QueryBuilder
@@ -119,7 +116,8 @@ class QueryBuilder
         $stmt = $this->limit(1)->execute();
 
         if (($row = $stmt->fetch())) {
-            return $this->createInstance($row);
+            $relatedCache = $this->fillRelatedCache([$row]);
+            return $this->createInstance($row, $relatedCache);
         }
 
         return false;
@@ -137,31 +135,54 @@ class QueryBuilder
         $stmt = $this->execute();
         $rows = $stmt->fetchAll();
 
+        if (!$rows) {
+            throw new \UnexpectedValueException('Failed to execute query!');
+        }
+
+        $relatedCache = $this->fillRelatedCache($rows);
+        foreach ($rows as $row) {
+            yield $this->createInstance($row, $relatedCache);
+        }
+    }
+
+    /**
+     * Pre-fetch any rows for HasManyRelation and ManyToManyRelation.
+     *
+     * @param array $rows
+     *
+     * @return array
+     */
+    private function fillRelatedCache(array $rows): array
+    {
         $relations = $this->metadata->getRelations($this->model);
         $filter = function ($name) use ($relations) {
-            return $relations[$name] instanceof HasManyRelation;
+            $relation = $relations[$name];
+            return $relation instanceof HasManyRelation || $relation instanceof ManyToManyRelation;
         };
-        $hasManyJoins = array_filter($this->joins, $filter, ARRAY_FILTER_USE_KEY);
+        $manyJoins = array_filter($this->joins, $filter, ARRAY_FILTER_USE_KEY);
 
-        if (count($hasManyJoins) > 0) {
-            foreach ($hasManyJoins as $name => $alias) {
-                $relatedCache[$name] = [];
-                $ids = [];
+        if (count($manyJoins) === 0) {
+            return [];
+        }
 
-                $relation = $relations[$name];
+        $relatedCache = [];
+        foreach ($manyJoins as $name => $alias) {
+            $relatedCache[$name] = [];
 
+            $relation = $relations[$name];
 
-                foreach ($rows as $row) {
-                    $rowIds = array_map('intval', explode(',', $row[$name] ?? ''));
-                    foreach ($rowIds as $id) {
-                        $ids[$id] = true;
-                    }
+            $ids = [];
+            foreach ($rows as $row) {
+                $rowIds = array_map('intval', explode(',', $row[$name] ?? ''));
+                foreach ($rowIds as $id) {
+                    $ids[$id] = true;
                 }
+            }
 
-                $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
-                    ->where($name . '.id IN ?', ...array_keys($ids))
-                    ->fetchAll()
-                ;
+            if (count($ids) > 0) {
+                $objects = (new QueryBuilder($this->conn, $relation->getModel(), $alias))
+                    ->where($alias . '.id IN ?', ...array_keys($ids))
+                    ->fetchAll();
 
                 foreach ($objects as $obj) {
                     $relatedCache[$name][$obj->getId()] = $obj;
@@ -169,14 +190,7 @@ class QueryBuilder
             }
         }
 
-        if (!$rows) {
-            yield;
-        } else {
-            foreach ($rows as $row) {
-                yield $this->createInstance($row, $relatedCache);
-
-            }
-        }
+        return $relatedCache;
     }
 
     /**
@@ -191,7 +205,7 @@ class QueryBuilder
 
         $params = $this->getParams();
 
-        if (count($params) > 0) {
+        if (is_array($params) && count($params) > 0) {
             $stmt->execute($params);
         } else {
             $stmt->execute();
@@ -262,12 +276,19 @@ class QueryBuilder
                 $sql .= " LEFT OUTER JOIN `$joinTable` AS `$joinAlias` ON " .
                     "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
                 $select[] = "GROUP_CONCAT(`$joinAlias`.`id`) AS `$name`";
+            } elseif ($relation instanceof ManyToManyRelation) {
+                $throughTable = $relation->getThroughTable();
+                $nearJoinColumn = $relation->getNearJoinColumn();
+                $farJoinColumn = $relation->getFarJoinColumn();
+
+                $sql .= " LEFT OUTER JOIN `$throughTable` ON "
+                    . "`$throughTable`.`$nearJoinColumn` = `$this->alias`.`id`";
+                $sql .= " LEFT OUTER JOIN `$joinTable` AS `$joinAlias` ON "
+                    . "`$joinAlias`.`id` = `$throughTable`.`$farJoinColumn`";
+                $select[] = "GROUP_CONCAT(`$joinAlias`.`id`) AS `$name`";
             } elseif ($relation instanceof BelongsToRelation) {
                 $sql .= " INNER JOIN `$joinTable` AS `$joinAlias` ON " .
                     "`$joinAlias`.`$foreignColumn` = `$this->alias`.`$localColumn`";
-            } else {
-                $class = get_class($relation);
-                throw new \InvalidArgumentException("Cannot handle $class as a relation of $this->model");
             }
         }
 
@@ -323,7 +344,8 @@ class QueryBuilder
         foreach ($this->joins as $name => $alias) {
             $relation = $relations[$name];
 
-            if (!($relation instanceof HasManyRelation)) {
+            // BelongsToRelation is handled directly in Model::createFromArray.
+            if ($relation instanceof BelongsToRelation) {
                 continue;
             }
 
@@ -342,18 +364,11 @@ class QueryBuilder
             });
 
             // We can't currently back-fill a partially-filled cache.
-            if (count($found) > 0 && count($foreignIds) > 0) {
-                throw new InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name");
+            if (count($foreignIds) > 0) {
+                throw new \InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name");
             }
 
-            if (count($found) > 0) {
-                $data[$name] = array_values($found);
-            } elseif (count($foreignIds)) {
-                $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
-                    ->where($name . '.id IN ?', ...$foreignIds)
-                    ->fetchAll();
-                $data[$name] = iterator_to_array($objects);
-            }
+            $data[$name] = array_values($found);
         }
 
         /** @var Model $class */

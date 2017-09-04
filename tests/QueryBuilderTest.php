@@ -2,11 +2,9 @@
 
 namespace Zerifas\Supermodel\Test;
 
-use Doctrine\Instantiator\Exception\InvalidArgumentException;
-use PDOStatement;
 use PHPUnit\Framework\TestCase;
-
 use PHPUnit_Framework_MockObject_MockObject;
+
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\Metadata\MetadataCache;
@@ -17,7 +15,7 @@ use Zerifas\Supermodel\Test\Model\UserModel;
 class QueryBuilderTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Connection
+     * @var PHPUnit_Framework_MockObject_MockObject|Connection
      */
     protected $conn;
 
@@ -42,7 +40,6 @@ class QueryBuilderTest extends TestCase
 
     public function testSimpleQuery()
     {
-        $sql = 'SELECT `p`.* FROM `posts` AS `p`';
         $sql = 'SELECT `p`.* FROM `posts` AS `p`';
 
         $stmt = $this->createMock('PDOStatement');
@@ -82,11 +79,23 @@ class QueryBuilderTest extends TestCase
             'LIMIT 1',
         ]);
 
+        $row = [
+            'p.id' => 1,
+            'a.id' => 2,
+            'u.id' => 3,
+        ];
+
+        $stmt = $this->createMock('PDOStatement');
+        $stmt->expects($this->once())
+            ->method('fetch')
+            ->willReturn($row)
+        ;
+
         $this->conn
             ->expects($this->once())
             ->method('prepare')
             ->with($sql)
-            ->willReturn(new \PDOStatement())
+            ->willReturn($stmt)
         ;
 
         $this->qb
@@ -190,11 +199,23 @@ class QueryBuilderTest extends TestCase
     {
         $sql = 'SELECT `p`.* FROM `posts` AS `p` LIMIT 10 OFFSET 15';
 
+        $stmt = $this->createMock('PDOStatement');
+        $stmt->expects($this->once())
+            ->method('execute')
+            ->willReturn(true)
+        ;
+        $stmt->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn([
+                ['p.id' => 1],
+            ])
+        ;
+
         $this->conn
             ->expects($this->once())
             ->method('prepare')
             ->with($sql)
-            ->willReturn(new \PDOStatement())
+            ->willReturn($stmt)
         ;
 
         $result = $this->qb
@@ -207,6 +228,25 @@ class QueryBuilderTest extends TestCase
         iterator_count($result);
     }
 
+    public function testInvalidQuery()
+    {
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('Failed to execute query!');
+
+        $stmt = $this->createMock('PDOStatement');
+        $stmt->expects($this->once())
+            ->method('fetchAll')
+            ->willReturn(false)
+        ;
+        $this->conn
+            ->expects($this->once())
+            ->method('prepare')
+            ->willReturn($stmt)
+        ;
+
+        iterator_count($this->qb->fetchAll());
+    }
+
     public function testHasManyRelationFetchOne()
     {
         $sql1 = 'SELECT `u`.*, GROUP_CONCAT(`up`.`id`) AS `userPosts` FROM `users` AS `u` '
@@ -216,7 +256,7 @@ class QueryBuilderTest extends TestCase
             . 'LIMIT 1'
         ;
 
-        $sql2 = 'SELECT `userPosts`.* FROM `posts` AS `userPosts` WHERE `userPosts`.`id` IN (?, ?)';
+        $sql2 = 'SELECT `up`.* FROM `posts` AS `up` WHERE `up`.`id` IN (?, ?)';
 
         $data1 = [
             'u.id' => 1,
@@ -226,11 +266,11 @@ class QueryBuilderTest extends TestCase
         ];
 
         $data2 = [
-            'userPosts.id' => 3,
+            'up.id' => 3,
         ];
 
         $data3 = [
-            'userPosts.id' => 5,
+            'up.id' => 5,
         ];
 
         $stmt1 = $this->createMock('PDOStatement');
@@ -285,7 +325,7 @@ class QueryBuilderTest extends TestCase
             . 'GROUP BY `u`.`id`'
         ;
 
-        $sql2 = 'SELECT `userPosts`.* FROM `posts` AS `userPosts` WHERE `userPosts`.`id` IN (?, ?, ?)';
+        $sql2 = 'SELECT `up`.* FROM `posts` AS `up` WHERE `up`.`id` IN (?, ?, ?)';
 
         $users = [
             [
@@ -303,9 +343,9 @@ class QueryBuilderTest extends TestCase
         ];
 
         $posts = [
-            ['userPosts.id' => 3],
-            ['userPosts.id' => 5],
-            ['userPosts.id' => 6],
+            ['up.id' => 3],
+            ['up.id' => 5],
+            ['up.id' => 6],
         ];
 
         $stmt1 = $this->createMock('PDOStatement');
@@ -344,7 +384,7 @@ class QueryBuilderTest extends TestCase
         /** @var UserModel[] $actualUsers */
         $actualUsers = iterator_to_array($result);
 
-//        $this->assertCount(2, $actualUsers);
+        $this->assertCount(2, $actualUsers);
 //        $this->assertInstanceOf(UserModel::class, $result[0]);
 //
 //        $map = function (PostModel $post) {
@@ -354,4 +394,87 @@ class QueryBuilderTest extends TestCase
 //        $this->assertEquals([3, 5], $postIds);
     }
 
+    public function testManyToManyJoin()
+    {
+        $sql = [];
+        $params = [];
+        $data = [];
+
+        $sql[] = implode(' ', [
+            'SELECT `p`.*, GROUP_CONCAT(`t`.`id`) AS `tags` FROM `posts` AS `p`',
+            'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `p`.`id`',
+            'LEFT OUTER JOIN `tags` AS `t` ON `t`.`id` = `posts_tags`.`tagId`',
+            'GROUP BY `p`.`id`',
+        ]);
+        $params[] = null;
+        $data[] = [
+            [
+                'p.id' => 1,
+                'p.createdAt' => '2017-09-04 14:40:02',
+                'p.updatedAt' => '2017-09-04 14:40:02',
+                'p.authorId' => 1,
+                'p.userId' => 2,
+                'p.title' => 'Post title 1',
+                'p.body' => 'Post body 1',
+                'tags' => '1,2',
+            ],
+        ];
+
+
+        $sql[] = implode(' ', [
+            'SELECT `t`.* FROM `tags` AS `t` WHERE `t`.`id` IN (?, ?)',
+        ]);
+        $params[] = [1, 2];
+        $data[] = [
+            [
+                't.id' => 1,
+                't.name' => 'tag1',
+            ],
+            [
+                't.id' => 2,
+                't.name' => 'tag2',
+            ],
+        ];
+
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
+
+        $posts = (new QueryBuilder($this->conn, PostModel::class, 'p'))
+            ->join('tags', 't')
+            ->fetchAll()
+        ;
+
+        foreach ($posts as $post) {
+            $this->assertCount(2, $post->getTags());
+        }
+    }
+
+    private function expectSQLWithParamsToReturnData(array $sql, array $params, array $data)
+    {
+        $map = function ($sql) {
+            return [$sql];
+        };
+        $sql = array_map($map, $sql);
+
+        $statements = [];
+        foreach ($sql as $idx => $query) {
+            $stmt = $this->createMock('PDOStatement');
+            $stmt->expects($this->once())
+                ->method('execute')
+                ->with($params[$idx])
+            ;
+            $stmt->expects($this->once())
+                ->method('fetchAll')
+                ->willReturn($data[$idx])
+            ;
+
+            $statements[] = $stmt;
+        }
+
+        $this->conn
+            ->expects($this->exactly(count($sql)))
+            ->method('prepare')
+            ->withConsecutive(...$sql)
+            ->willReturnOnConsecutiveCalls(...$statements)
+        ;
+    }
 }

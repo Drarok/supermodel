@@ -6,6 +6,7 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\HasManyRelation;
+use Zerifas\Supermodel\Relation\ManyToManyRelation;
 use Zerifas\Supermodel\Relation\RelationInterface;
 use Zerifas\Supermodel\Transformers\TransformerInterface;
 
@@ -33,19 +34,25 @@ abstract class Model implements SupermodelInterface
         }
 
         foreach ($metadata->getRelations(static::class) as $name => $relation) {
+            if (!isset($data[$name])) {
+                continue;
+            }
+
+            if (!($relation instanceof AbstractRelation)) {
+                $class = static::class;
+                throw new \UnexpectedValueException("Relation $name is invalid in $class");
+            }
+
             /** @var Model $joinModel */
             $joinModel = $relation->getModel();
             $foreignColumn = $relation->getForeignColumn();
 
-            if ($relation instanceof HasManyRelation) {
-                $obj->$name = $data[$name] ?? null;
+            if ($relation instanceof HasManyRelation || $relation instanceof ManyToManyRelation) {
+                $obj->$name = $data[$name];
             } elseif ($relation instanceof BelongsToRelation) {
                 if (!empty($data["$name.$foreignColumn"])) {
                     $obj->$name = $joinModel::createFromArray($data, $metadata, $name);
                 }
-            } else {
-                $class = static::class;
-                throw new \InvalidArgumentException("Cannot handle $joinModel as a relation of $class");
             }
         }
 

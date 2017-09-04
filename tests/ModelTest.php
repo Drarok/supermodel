@@ -126,7 +126,6 @@ class ModelTest extends TestCase
             'posts.userId' => 1,
             'posts.title' => 'This is a title',
             'posts.body' => 'This is a body',
-            'posts.enabled' => 1,
 
             'author.id' => 5,
             'author.username' => 'alice',
@@ -149,7 +148,6 @@ class ModelTest extends TestCase
             'posts.userId' => 1,
             'posts.title' => 'This is a title',
             'posts.body' => 'This is a body',
-            'posts.enabled' => 1,
         ];
         $this->assertEquals($expected, $actual);
     }
