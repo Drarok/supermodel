@@ -1,6 +1,7 @@
 # Use container-based builds
 dist: trusty
 sudo: false
+group: edge
 
 language: php
 
@@ -9,7 +10,7 @@ php:
   - '7.1'
 
 install:
-  - composer install --dev --no-interaction
+  - composer install --no-interaction
 
 script:
   - mkdir -p build/logs
@@ -23,4 +24,3 @@ cache:
   directories:
   - vendor
   - $HOME/.cache/composer
-  - $HOME/.phpenv/versions
