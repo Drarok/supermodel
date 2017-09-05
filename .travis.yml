@@ -1,3 +1,7 @@
+# Use container-based builds
+dist: trusty
+sudo: false
+
 language: php
 
 php:
