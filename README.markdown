@@ -15,12 +15,17 @@ composer require 'zerifas/supermodel:v2.x-dev'
 <?php
 
 use Zerifas\Supermodel\AutoAccessorsTrait;
-use Zerifas\Supermodel\Model;
+use Zerifas\Supermodel\TimestampedModel;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
+use Zerifas\Supermodel\Transformers\BooleanTransformer;
 
-class PostModel extends Model
+class PostModel extends TimestampedModel
 {
     use AutoAccessorsTrait;
+
+    protected $userId;
+    protected $title;
+    protected $body;
 
     public static function getTableName(): string
     {
@@ -31,21 +36,26 @@ class PostModel extends Model
     {
         return [
             'id',
+            'createdAt', // Handled automatically in TimestampedModel
+            'updatedAt', // Handled automatically in TimestampedModel
             'userId',
             'title',
             'body',
+            'enabled',
         ];
     }
 
     public static function getValueTransformers(): array
     {
-        return [];
+        return array_merge(parent::getValueTransformers(), [
+            'enabled' => BooleanTransformer::class,
+        ]);
     }
 
     public static function getRelations(): array
     {
         return [
-            'user' => new BelongsToRelation(UserModel::class, 'id', 'userId'),
+            'user' => new BelongsToRelation(UserModel::class, 'userId'),
         ];
     }
 }
@@ -71,7 +81,7 @@ class UserModel extends Model
     {
         return [
             'id',
-            'name',
+            'username',
         ];
     }
 
@@ -82,7 +92,9 @@ class UserModel extends Model
 
     public static function getRelations(): array
     {
-        return [];
+        return [
+            'posts' => new HasManyRelation(PostModel::class, 'userId'),
+        ];
     }
 }
 ```
@@ -97,14 +109,12 @@ use Zerifas\Supermodel\Connection;
 $dsn = 'mysql:host=localhost;dbname=test;charset=utf8;';
 $conn = new Connection($dsn, 'root', 'password', new MemoryCache());
 
-$post = $conn->find(PostModel::class)
-    ->join('user')
-    ->where([
-        PostModel::greaterThan('id', 10),
-        PostModel::equal('user.id', 22),
-    ])
-    ->orderBy(PostModel::column('user.username'), 'ASC')
-    ->orderBy(PostModel::column('createdAt'), 'DESC')
+$post = $conn->find(PostModel::class, 'p')
+    ->join('user', 'u')
+    ->where('p.id > ?', 10)
+    ->where('u.id = ?', 22)
+    ->orderBy('u.username')
+    ->orderBy('p.createdAt', 'DESC')
     ->fetchOne()
 ;
 
@@ -114,13 +124,16 @@ $post->getUser()->getId();
 $post->getUser()->getName();
 
 // The `fetchAll` method returns a Generator, not an array
-$posts = $conn->find(PostModel::class)
-    ->where(PostModel::equal('userId', 2))
-    ->where(PostModel::like('title', 'News%'))
+$users = $conn->find(UserModel::class, 'u')
+    ->join('posts', 'p')
+    ->where('p.userId = ?', 2)
+    ->where('p.title LIKE ?', 'News%')
     ->fetchAll()
 ;
 
-foreach ($posts as $post) {
-    // $post->getId()
+foreach ($users as $user) {
+    foreach ($user->getPosts() as $post) {
+        // $post->getId();
+    }
 }
 ```
