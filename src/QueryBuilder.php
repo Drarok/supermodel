@@ -382,7 +382,7 @@ class QueryBuilder
      * Pre-transform HasManyRelation data into objects.
      *
      * @param array $data Raw data to create objects from
-     * @param array $relatedCache Optional cache of related objects
+     * @param array $relatedCache Cache of related objects
      *
      * @return Model
      */
@@ -397,6 +397,10 @@ class QueryBuilder
 
             // BelongsToRelation is handled directly in Model::createFromArray.
             if ($relation instanceof BelongsToRelation) {
+                continue;
+            }
+
+            if (($data['.' . $name] ?? null) === null) {
                 continue;
             }
 
