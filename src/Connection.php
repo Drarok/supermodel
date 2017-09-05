@@ -30,9 +30,9 @@ class Connection
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_FETCH_TABLE_NAMES => true,
             ]);
-        }
 
-        $this->db->exec('SET @@group_concat_max_len = 1000000;');
+            $this->db->exec('SET @@group_concat_max_len = 1000000;');
+        }
 
         $this->metadata = new MetadataCache($cache);
     }

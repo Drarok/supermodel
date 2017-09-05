@@ -14,7 +14,12 @@ use Zerifas\Supermodel\Test\Model\PostModel;
 class ConnectionTest extends TestCase
 {
     /**
-     * @var \PHPUnit_Framework_MockObject_MockObject|Connection
+     * @var PDO
+     */
+    private $pdo;
+
+    /**
+     * @var Connection
      */
     protected $conn;
 
@@ -22,9 +27,28 @@ class ConnectionTest extends TestCase
     {
         parent::setUp();
 
+        $stmt = $this->getMockBuilder(\PDOStatement::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
+
+        $pdo = $this->getMockBuilder(\PDO::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
+
+        $pdo->expects($this->any())
+            ->method('prepare')
+            ->willReturn($stmt);
+
         // TODO: Use mocks instead of a SQLite database.
-        $this->conn = new Connection('sqlite::memory:', '', '', new MemoryCache());
+        $this->conn = new Connection('', '', '', new MemoryCache(), $pdo);
         $this->conn->prepare('CREATE TABLE "posts" ("column" TEXT)')->execute();
+    }
+
+    public function testConstructor()
+    {
+        // ???
     }
 
     public function testGetMetadata()
