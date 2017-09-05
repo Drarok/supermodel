@@ -4,7 +4,6 @@ namespace Zerifas\Supermodel\Test;
 
 use DateTime;
 
-use Doctrine\Instantiator\Exception\InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
 use Zerifas\Supermodel\Cache\MemoryCache;
@@ -33,7 +32,6 @@ class ModelTest extends TestCase
         $data = [
             'p.id' => 1,
             'p.createdAt' => $date,
-            'p.updatedAt' => $date,
             'p.userId' => 1,
             'p.title' => 'This is a title',
             'p.body' => 'This is a body',
@@ -43,9 +41,14 @@ class ModelTest extends TestCase
         $obj = PostModel::createFromArray($data, $this->metadata, 'p');
 
         $this->assertAttributeEquals(1, 'id', $obj);
-        $this->assertAttributeEquals(DateTime::createFromFormat('Y-m-d H:i:s', $date), 'createdAt', $obj);
-
         $this->assertEquals('This is a title', $obj->getTitle());
+
+        $dateTime = DateTime::createFromFormat('Y-m-d H:i:s', $date);
+        $this->assertEquals($dateTime, $obj->getCreatedAt());
+
+        $obj->setUpdatedAt($dateTime);
+        $obj->toArray(new MetadataCache(new MemoryCache()));
+        $this->assertNotEquals($dateTime, $obj->getUpdatedAt());
     }
 
     public function testSimpleCreateWithInvalidRelation()

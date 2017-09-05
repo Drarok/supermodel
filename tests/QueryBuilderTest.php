@@ -264,7 +264,12 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(1, $beforeCount);
     }
 
-    public function testCount()
+    public function testSimpleCount()
+    {
+        $this->assertEquals(0, $this->qb->count());
+    }
+
+    public function testAdvancedCount()
     {
         $date = '2017-09-05 19:25:23';
 
@@ -299,7 +304,13 @@ class QueryBuilderTest extends TestCase
 
         $this->expectSQLWithParamsToReturnData($sql, $params, $data, ['fetchColumn', 'fetchAll', 'fetchAll']);
 
+        $beforeCount = 0;
+        $before = function () use (&$beforeCount) {
+            ++$beforeCount;
+        };
+
         $rowCount = $this->qb
+            ->before($before)
             ->join('tags', 't')
             ->where('p.createdAt > ?', \DateTime::createFromFormat('Y-m-d H:i:s', $date))
             ->where('t.name = ?', 'tag1')
@@ -311,6 +322,8 @@ class QueryBuilderTest extends TestCase
         $iterCount = iterator_count($rows);
 
         $this->assertEquals(1, $iterCount);
+
+        $this->assertEquals(3, $beforeCount);
     }
 
     public function testInvalidQuery()

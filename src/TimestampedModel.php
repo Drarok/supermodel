@@ -27,19 +27,44 @@ abstract class TimestampedModel extends Model
         ];
     }
 
+    public function getCreatedAt()
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(DateTime $createdAt)
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    public function getUpdatedAt(): DateTime
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(DateTime $updatedAt)
+    {
+        $this->updatedAt = $updatedAt;
+        return $this;
+    }
+
     public function toArray(MetadataCache $metadata): array
     {
         $table = $metadata->getTableName(static::class);
         $data = parent::toArray($metadata);
 
-        $now = DateTimeTransformer::toArray(new DateTime());
+        $now = new DateTime();
+        $nowString = DateTimeTransformer::toArray($now);
 
         $key = "${table}.createdAt";
         if (empty($data[$key])) {
-            $data[$key] = $now;
+            $this->setCreatedAt($now);
+            $data[$key] = $nowString;
         }
 
-        $data["${table}.updatedAt"] = $now;
+        $this->setUpdatedAt($now);
+        $data["${table}.updatedAt"] = $nowString;
 
         return $data;
     }
