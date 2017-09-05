@@ -218,7 +218,7 @@ class QueryBuilderTest extends TestCase
 
         $results = $this->qb
             ->orderBy('p.createdAt', 'DESC')
-            ->where('p.id > ?',10)
+            ->where('p.id > ?', 10)
             ->fetchAll()
         ;
         iterator_count($results);
@@ -404,8 +404,12 @@ class QueryBuilderTest extends TestCase
         iterator_count($posts);
     }
 
-    private function expectSQLWithParamsToReturnData(array $sql, array $params, array $data, string $fetchMethod = 'fetchAll')
-    {
+    private function expectSQLWithParamsToReturnData(
+        array $sql,
+        array $params,
+        array $data,
+        string $fetchMethod = 'fetchAll'
+    ) {
         $map = function ($sql) {
             return [$sql];
         };

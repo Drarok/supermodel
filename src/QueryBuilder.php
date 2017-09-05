@@ -204,7 +204,6 @@ class QueryBuilder
             foreach ($objects as $obj) {
                 $relatedCache[$name][$obj->getId()] = $obj;
             }
-
         }
 
         return $relatedCache;

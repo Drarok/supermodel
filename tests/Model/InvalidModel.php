@@ -7,7 +7,8 @@ class InvalidModel extends PostModel
     public static function getRelations(): array
     {
         return [
-            'invalid' => new class {},
+            'invalid' => new class {
+            },
         ];
     }
 }

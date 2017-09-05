@@ -15,7 +15,8 @@ class AutoAccessorsTraitTest extends TestCase
         $this->model = new PostModel();
     }
 
-    public function testGetter() {
+    public function testGetter()
+    {
         $this->assertNull($this->model->getAuthorId());
     }
 

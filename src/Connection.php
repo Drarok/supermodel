@@ -13,8 +13,13 @@ class Connection
     protected $db;
     protected $metadata;
 
-    public function __construct(string $dsn, string $username, string $password, CacheInterface $cache, PDO $dbOverride = null)
-    {
+    public function __construct(
+        string $dsn,
+        string $username,
+        string $password,
+        CacheInterface $cache,
+        PDO $dbOverride = null
+    ) {
         if ($dbOverride !== null) {
             $this->db = $dbOverride;
         } else {
