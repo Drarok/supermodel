@@ -32,6 +32,8 @@ class Connection
             ]);
         }
 
+        $this->db->exec('SET @@group_concat_max_len = 1000000;');
+
         $this->metadata = new MetadataCache($cache);
     }
 
