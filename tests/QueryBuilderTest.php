@@ -47,7 +47,7 @@ class QueryBuilderTest extends TestCase
         $params[] = null;
         $data[] = ['posts.id' => 1];
 
-        $this->expectSQLWithParamsToReturnData($sql, $params, $data, 'fetch');
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data, ['fetch']);
 
         $post = $this->qb->fetchOne();
         $this->assertInstanceOf(PostModel::class, $post);
@@ -264,6 +264,55 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(1, $beforeCount);
     }
 
+    public function testCount()
+    {
+        $date = '2017-09-05 19:25:23';
+
+        $sql = $params = $data = [];
+
+        $sql[] = 'SELECT COUNT(DISTINCT `posts`.`id`) AS `count` FROM `posts` '
+            . 'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `posts`.`id` '
+            . 'LEFT OUTER JOIN `tags` AS `tags` ON `tags`.`id` = `posts_tags`.`tagId` '
+            . 'WHERE `posts`.`createdAt` > ? AND `tags`.`name` = ?';
+        $params[] = [$date, 'tag1'];
+        $data[] = [1];
+
+        $sql[] = 'SELECT `posts`.*, GROUP_CONCAT(`tags`.`id`) AS `tags` FROM `posts` '
+            . 'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `posts`.`id` '
+            . 'LEFT OUTER JOIN `tags` AS `tags` ON `tags`.`id` = `posts_tags`.`tagId` '
+            . 'WHERE `posts`.`createdAt` > ? AND `tags`.`name` = ? '
+            . 'GROUP BY `posts`.`id`';
+        $params[] = [$date, 'tag1'];
+        $data[] = [
+            [
+                'posts.id' => 1,
+                '.tags' => '2,3',
+            ],
+        ];
+
+        $sql[] = 'SELECT `tags`.* FROM `tags` WHERE `tags`.`id` IN (?, ?)';
+        $params[] = [2, 3];
+        $data[] = [
+            ['tags.id' => 2],
+            ['tags.id' => 3],
+        ];
+
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data, ['fetchColumn', 'fetchAll', 'fetchAll']);
+
+        $rowCount = $this->qb
+            ->join('tags', 't')
+            ->where('p.createdAt > ?', \DateTime::createFromFormat('Y-m-d H:i:s', $date))
+            ->where('t.name = ?', 'tag1')
+            ->count();
+
+        $this->assertEquals(1, $rowCount);
+
+        $rows = $this->qb->fetchAll();
+        $iterCount = iterator_count($rows);
+
+        $this->assertEquals(1, $iterCount);
+    }
+
     public function testInvalidQuery()
     {
         $this->expectException(\UnexpectedValueException::class);
@@ -408,12 +457,16 @@ class QueryBuilderTest extends TestCase
         array $sql,
         array $params,
         array $data,
-        string $fetchMethod = 'fetchAll'
+        array $fetchMethods = null
     ) {
         $map = function ($sql) {
             return [$sql];
         };
         $sql = array_map($map, $sql);
+
+        if ($fetchMethods === null) {
+            $fetchMethods = array_fill(0, count($sql), 'fetchAll');
+        }
 
         $statements = [];
         foreach ($sql as $idx => $query) {
@@ -423,7 +476,7 @@ class QueryBuilderTest extends TestCase
                 ->with($params[$idx])
             ;
             $stmt->expects($this->once())
-                ->method($fetchMethod)
+                ->method($fetchMethods[$idx])
                 ->willReturn($data[$idx])
             ;
 

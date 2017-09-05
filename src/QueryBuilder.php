@@ -128,6 +128,25 @@ class QueryBuilder
         return $this;
     }
 
+    public function count()
+    {
+        $sql = $this->generateSQL(true);
+        $params = $this->getParams();
+
+        if (($before = $this->before)) {
+            $before($sql, $params);
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        if (is_array($params) && count($params)) {
+            $stmt->execute($params);
+        } else {
+            $stmt->execute();
+        }
+
+        return (int) $stmt->fetchColumn();
+    }
+
     /**
      * Execute the query, and get a single object.
      *
@@ -271,7 +290,7 @@ class QueryBuilder
         return $params;
     }
 
-    private function generateSQL(): string
+    private function generateSQL(bool $countOnly = false): string
     {
         $table = $this->metadata->getTableName($this->model);
 
@@ -321,29 +340,38 @@ class QueryBuilder
             $sql .= ' WHERE ' . implode(' AND ', array_map($map, $this->where));
         }
 
+        // Override the select if we're only counting.
+        if ($countOnly) {
+            $select = [
+                "COUNT(DISTINCT `$table`.`id`) AS `count`"
+            ];
+        }
+
         $sql = sprintf(
             "SELECT %s FROM `$table`%s",
             implode(', ', $select),
             $sql
         );
 
-        if ($hasMany) {
-            $sql .= " GROUP BY `$table`.`id`";
-        }
+        if (!$countOnly) {
+            if ($hasMany) {
+                $sql .= " GROUP BY `$table`.`id`";
+            }
 
-        if (count($this->orderBy) > 0) {
-            $map = function (QueryBuilderClause $clause) {
-                return $clause->toString() . ' ' . $clause->getValues()[0];
-            };
+            if (count($this->orderBy) > 0) {
+                $map = function (QueryBuilderClause $clause) {
+                    return $clause->toString() . ' ' . $clause->getValues()[0];
+                };
 
-            $sql .= ' ORDER BY ' . implode(', ', array_map($map, $this->orderBy));
-        }
+                $sql .= ' ORDER BY ' . implode(', ', array_map($map, $this->orderBy));
+            }
 
-        if ($this->limit !== null) {
-            $sql .= ' LIMIT ' . $this->limit;
+            if ($this->limit !== null) {
+                $sql .= ' LIMIT ' . $this->limit;
 
-            if ($this->offset !== null) {
-                $sql .= ' OFFSET ' . $this->offset;
+                if ($this->offset !== null) {
+                    $sql .= ' OFFSET ' . $this->offset;
+                }
             }
         }
 
@@ -358,7 +386,7 @@ class QueryBuilder
      *
      * @return Model
      */
-    private function createInstance(array $data, array $relatedCache = []): Model
+    private function createInstance(array $data, array $relatedCache): Model
     {
         $relations = $this->metadata->getRelations($this->model);
 
@@ -376,12 +404,20 @@ class QueryBuilder
             $ids = array_map('intval', explode(',', $data['.' . $name] ?? ''));
 
             // Don't hit the database for objects we have in the cache.
-            $objects = [];
+            $objects = $missing = [];
             foreach ($ids as $id) {
                 if (!isset($cache[$id])) {
-                    throw new \InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name");
+                    $missing[] = $id;
+                    continue;
                 }
                 $objects[] = $cache[$id];
+            }
+
+            if (count($missing) > 0) {
+                var_dump($relatedCache);
+
+                $missing = implode(', ', $missing);
+                throw new \InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name - missing ids: $missing");
             }
 
             $data['.' . $name] = $objects;
