@@ -10,18 +10,22 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 
 class Connection
 {
-    private $db;
-    private $metadata;
+    protected $db;
+    protected $metadata;
 
-    public function __construct(string $dsn, string $username, string $password, CacheInterface $cache)
+    public function __construct(string $dsn, string $username, string $password, CacheInterface $cache, PDO $dbOverride = null)
     {
-        $this->db = new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_STRINGIFY_FETCHES  => false,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::ATTR_FETCH_TABLE_NAMES  => true,
-        ]);
+        if ($dbOverride !== null) {
+            $this->db = $dbOverride;
+        } else {
+            $this->db = new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_STRINGIFY_FETCHES => false,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_FETCH_TABLE_NAMES => true,
+            ]);
+        }
 
         $this->metadata = new MetadataCache($cache);
     }
@@ -35,6 +39,7 @@ class Connection
      * Get a query builder for the given model
      *
      * @param string $class Name of the class
+     * @param string $alias Alias to use when specifying clauses
      *
      * @return QueryBuilder
      */
@@ -96,17 +101,22 @@ class Connection
      *
      * @return void
      */
-    private function create(Model $obj)
+    protected function create(Model $obj)
     {
         $data = $obj->toArray($this->metadata);
 
         $class = get_class($obj);
         $table = $this->metadata->getTableName($class);
-        $columns = $this->metadata->getColumns($class);
 
+        // We don't need the id column when creating, so filter it out.
+        $columns = array_filter($this->metadata->getColumns($class), function ($column) {
+            return $column !== 'id';
+        });
+
+        // Create params by mapping the columns, using null if not set.
         $params = [];
         foreach ($columns as $column) {
-            $params[] = $data["${table}.${column}"] ?? null;
+            $params[] = $data["$table.$column"] ?? null;
         }
 
         $placeholders = implode(', ', array_fill(0, count($columns), '?'));
@@ -129,7 +139,7 @@ class Connection
      *
      * @return void
      */
-    private function update(Model $obj)
+    protected function update(Model $obj)
     {
         $data = $obj->toArray($this->metadata);
 

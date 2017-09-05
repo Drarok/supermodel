@@ -2,9 +2,13 @@
 
 namespace Zerifas\Supermodel\Test;
 
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
+use ReflectionObject;
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
+use Zerifas\Supermodel\Metadata\MetadataCache;
+use Zerifas\Supermodel\QueryBuilder;
 use Zerifas\Supermodel\Test\Model\PostModel;
 
 class ConnectionTest extends TestCase
@@ -20,140 +24,160 @@ class ConnectionTest extends TestCase
 
         // TODO: Use mocks instead of a SQLite database.
         $this->conn = new Connection('sqlite::memory:', '', '', new MemoryCache());
-
-        $sql = 'CREATE TABLE "tags" ("id" INTEGER PRIMARY KEY, "name" TEXT)';
-        $this->conn->prepare($sql)->execute();
-
-        $sql = 'INSERT INTO "tags" ("name") VALUES (?)';
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute(['tag1']);
-        $stmt->execute(['tag2']);
-        $stmt->execute(['tag3']);
-
-        $sql = 'CREATE TABLE "posts_tags" ("postId" INTEGER, "tagId" INTEGER)';
-        $this->conn->prepare($sql)->execute();
-
-        $sql = 'INSERT INTO "posts_tags" ("postId", "tagId") VALUES (?, ?)';
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([1, 1]);
-        $stmt->execute([1, 2]);
-
-        $sql = 'CREATE TABLE "users" (id INTEGER PRIMARY KEY, "username" TEXT)';
-        $this->conn->prepare($sql)->execute();
-
-        $sql = 'INSERT INTO "users" ("username") VALUES (?)';
-        $this->conn->prepare($sql)->execute(['drarok']);
-
-        $create = implode(' ', [
-            'CREATE TABLE "posts"',
-            '(id INTEGER PRIMARY KEY,',
-            'createdAt TEXT,',
-            'updatedAt TEXT,',
-            'authorId INTEGER,',
-            'userId INTEGER,',
-            'title TEXT,',
-            'body TEXT,',
-            'enabled INTEGER)',
-        ]);
-
-        $insert = implode(' ', [
-            'INSERT INTO "posts"',
-            '(id, createdAt, updatedAt, authorId,',
-            'userId, title, body, enabled)',
-            'VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
-        ]);
-
-        $this->conn->prepare($create)->execute();
-        $this->conn->prepare($insert)->execute([
-            1,
-            '2016-01-01 00:00:00',
-            '2016-01-01 00:00:00',
-            1,
-            1,
-            'This is a sample title',
-            'This is a sample body',
-            1,
-        ]);
+        $this->conn->prepare('CREATE TABLE "posts" ("column" TEXT)')->execute();
     }
 
-    public function testFindOne()
+    public function testGetMetadata()
     {
-        // This object won't contain any data because the SQLite driver doesn't support PDO::ATTR_FETCH_TABLE_NAMES
-        $post = $this->conn->find(PostModel::class, 'p')
-            ->where('p.id > ?', 0)
-            ->fetchOne();
-
-        $this->assertNotFalse($post);
-        $this->assertInstanceOf(PostModel::class, $post);
+        $metadata = $this->conn->getMetadata();
+        $this->assertSame($metadata, $this->conn->getMetadata());
     }
 
-    public function testFindOneWithBelongsTo()
+    public function testFind()
     {
-        $post = $this->conn->find(PostModel::class, 'p')
-            ->join('user', 'u')
-            ->fetchOne();
-
-        $this->assertNotFalse($post);
-        $this->assertInstanceOf(PostModel::class, $post);
+        $qb = $this->conn->find(PostModel::class, 'p');
+        $this->assertInstanceOf(QueryBuilder::class, $qb);
     }
 
-    public function testFindOneWithHasMany()
+    public function testPrepare()
     {
-        $post = $this->conn->find(PostModel::class, 'p')
-            ->join('tags', 't')
-            ->fetchOne();
-
-        $this->assertNotFalse($post);
-        $this->assertInstanceOf(PostModel::class, $post);
+        $stmt = $this->conn->prepare('SELECT * FROM "posts" WHERE "id" = ?');
+        $this->assertInstanceOf(\PDOStatement::class, $stmt);
     }
 
     public function testSaveCreate()
     {
-        $post = new PostModel();
-        $post->setTitle('This is a sample title!!!');
-        $this->conn->save($post);
+        $mockedConn = $this->getMockBuilder(Connection::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->setMethods(['create', 'update'])
+            ->getMock();
 
-        $stmt = $this->conn->prepare('SELECT COUNT(*) FROM posts');
-        $stmt->execute();
+        $db = $this->createMock(\PDO::class);
+        $setupFakes = function () use ($db) {
+            $this->db = $db;
+        };
+        $bound = \Closure::bind($setupFakes, $mockedConn, Connection::class);
+        $bound();
 
-        // There's already 1 row in the table from setUp, so now there should be 2.
-        $this->assertEquals(2, $stmt->fetchColumn());
+        $mockedConn->expects($this->exactly(3))
+            ->method('create');
+        $mockedConn->expects($this->never())
+            ->method('update');
+
+        $model = new PostModel();
+        $model->setId(1);
+        $mockedConn->save(new PostModel());
+        $mockedConn->saveAll([new PostModel(), new PostModel()]);
     }
 
     public function testSaveUpdate()
     {
-        $post = new PostModel();
-        $post->setId(1);
-        $post->setTitle('This is a sample title!!!');
-        $this->conn->save($post);
+        $mockedConn = $this->getMockBuilder(Connection::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->setMethods(['create', 'update'])
+            ->getMock();
 
-        $stmt = $this->conn->prepare('SELECT COUNT(*) FROM posts');
-        $stmt->execute();
+        $db = $this->createMock(\PDO::class);
+        $setupFakes = function () use ($db) {
+            $this->db = $db;
+        };
+        $bound = \Closure::bind($setupFakes, $mockedConn, Connection::class);
+        $bound();
 
-        // We should have updated the existing row.
-        $stmt = $this->conn->prepare('SELECT * FROM posts');
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
+        $mockedConn->expects($this->never())
+            ->method('create');
+        $mockedConn->expects($this->exactly(3))
+            ->method('update');
 
-        $this->assertCount(1, $rows);
-        $this->assertEquals($post->getTitle(), $rows[0]['title']);
+        $model = new PostModel();
+        $model->setId(1);
+        $mockedConn->save($model);
+        $mockedConn->saveAll([$model, $model]);
     }
 
-    public function testSaveAll()
+    public function testCreate()
     {
-        $posts = [];
-        $posts[] = (new PostModel())->setTitle('Created 1');
-        $posts[] = (new PostModel())->setTitle('Created 2');
+        $stmt = $this->getMockBuilder(\PDOStatement::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
 
-        $this->conn->saveAll($posts);
+        $db = $this->getMockBuilder(\PDO::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
 
-        $stmt = $this->conn->prepare('SELECT * FROM posts');
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
+        $conn = new Connection('', '', '', new MemoryCache(), $db);
 
-        $this->assertCount(3, $rows);
-        $this->assertEquals('This is a sample title', $rows[0]['title']);
-        $this->assertEquals('Created 1', $rows[1]['title']);
-        $this->assertEquals('Created 2', $rows[2]['title']);
+        $sql = 'INSERT INTO `posts` (createdAt, updatedAt, authorId, userId, title, body) '
+            . 'VALUES (?, ?, ?, ?, ?, ?)';
+
+        $db->expects($this->once())
+            ->method('prepare')
+            ->with($sql)
+            ->willReturn($stmt);
+
+        $db->expects($this->once())
+            ->method('lastInsertId')
+            ->willReturn(1);
+
+        $now = (new \DateTime())->format('Y-m-d H:i:s');
+
+        $stmt->expects($this->once())
+            ->method('execute')
+            ->with([$now, $now, null, null, 'title 1', 'body 1'])
+            ->willReturn(true);
+
+        $post = new PostModel();
+        $post->setTitle('title 1');
+        $post->setBody('body 1');
+        $conn->save($post);
+
+        $this->assertEquals(1, $post->getId());
+    }
+
+    public function testUpdate()
+    {
+        $stmt = $this->getMockBuilder(\PDOStatement::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
+
+        $db = $this->getMockBuilder(\PDO::class)
+            ->disableOriginalConstructor()
+            ->disableProxyingToOriginalMethods()
+            ->getMock();
+
+        $conn = new Connection('', '', '', new MemoryCache(), $db);
+
+        $sql = 'UPDATE `posts` SET createdAt = ?, updatedAt = ?, authorId = ?, userId = ?, title = ?, body = ? '
+            . 'WHERE id = ?';
+
+        $db->expects($this->once())
+            ->method('prepare')
+            ->with($sql)
+            ->willReturn($stmt);
+
+        $db->expects($this->never())
+            ->method('lastInsertId');
+
+        $then = '2017-09-05 15:47:48';
+        $now = (new \DateTime())->format('Y-m-d H:i:s');
+
+        $stmt->expects($this->once())
+            ->method('execute')
+            ->with([$then, $now, null, null, 'title 2', 'body 2', 10])
+            ->willReturn(true);
+
+        $post = new PostModel();
+        $post->setId(10);
+        $post->setCreatedAt(\DateTime::createFromFormat('Y-m-d H:i:s', $then));
+        $post->setTitle('title 2');
+        $post->setBody('body 2');
+        $conn->save($post);
+
+        $this->assertEquals(10, $post->getId());
     }
 }
