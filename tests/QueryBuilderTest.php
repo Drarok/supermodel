@@ -2,6 +2,7 @@
 
 namespace Zerifas\Supermodel\Test;
 
+use function iterator_count;
 use PHPUnit\Framework\TestCase;
 use PHPUnit_Framework_MockObject_MockObject;
 
@@ -37,6 +38,24 @@ class QueryBuilderTest extends TestCase
 
         $this->conn = $mockConn;
         $this->qb = new QueryBuilder($this->conn, PostModel::class, 'p');
+    }
+
+    public function testFetchOneValid()
+    {
+        $sql = $params = $data = [];
+        $sql[] = 'SELECT `posts`.* FROM `posts` LIMIT 1';
+        $params[] = null;
+        $data[] = ['posts.id' => 1];
+
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data, 'fetch');
+
+        $post = $this->qb->fetchOne();
+        $this->assertInstanceOf(PostModel::class, $post);
+    }
+
+    public function testFetchOneInvalid()
+    {
+        $this->assertFalse($this->qb->fetchOne());
     }
 
     public function testSimpleQuery()
@@ -96,6 +115,26 @@ class QueryBuilderTest extends TestCase
         ;
 
         iterator_count($results);
+    }
+
+    public function testDuplicateJoinRelation()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate join relation: author');
+
+        $this->qb
+            ->join('author', 'a')
+            ->join('author', 'b');
+    }
+
+    public function testDuplicateJoinAlias()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate join alias: a');
+
+        $this->qb
+            ->join('author', 'a')
+            ->join('user', 'a');
     }
 
     public function testJoinWithWhereQuery()
@@ -205,6 +244,24 @@ class QueryBuilderTest extends TestCase
             ->fetchAll()
         ;
         iterator_count($results);
+    }
+
+    public function testBefore()
+    {
+        $beforeCount = 0;
+        $before = function ($sql, $params) use (&$beforeCount) {
+            ++$beforeCount;
+            $this->assertEquals('SELECT `posts`.* FROM `posts` LIMIT 1', $sql);
+            $this->assertEquals(null, $params);
+        };
+
+        $this->assertEquals(0, $beforeCount);
+
+        $this->qb
+            ->before($before)
+            ->fetchOne();
+
+        $this->assertEquals(1, $beforeCount);
     }
 
     public function testInvalidQuery()
@@ -317,7 +374,37 @@ class QueryBuilderTest extends TestCase
         iterator_count($results);
     }
 
-    private function expectSQLWithParamsToReturnData(array $sql, array $params, array $data)
+    public function testInvalidCache()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot use partially-filled cache for ' . PostModel::class . '.tags');
+
+        $sql = $params = $data = [];
+        $sql[] = 'SELECT `posts`.*, GROUP_CONCAT(`tags`.`id`) AS `tags` FROM `posts` '
+            . 'LEFT OUTER JOIN `posts_tags` ON `posts_tags`.`postId` = `posts`.`id` '
+            . 'LEFT OUTER JOIN `tags` AS `tags` ON `tags`.`id` = `posts_tags`.`tagId` '
+            . 'GROUP BY `posts`.`id`';
+        $params[] = null;
+        $data[] = [
+            [
+                'posts.id' => 1,
+                '.tags' => '2,3',
+            ],
+        ];
+
+        $sql[] = 'SELECT `tags`.* FROM `tags` WHERE `tags`.`id` IN (?, ?)';
+        $params[] = [2, 3];
+        $data[] = [];
+
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
+
+        $posts = $this->qb
+            ->join('tags', 't')
+            ->fetchAll();
+        iterator_count($posts);
+    }
+
+    private function expectSQLWithParamsToReturnData(array $sql, array $params, array $data, string $fetchMethod = 'fetchAll')
     {
         $map = function ($sql) {
             return [$sql];
@@ -332,7 +419,7 @@ class QueryBuilderTest extends TestCase
                 ->with($params[$idx])
             ;
             $stmt->expects($this->once())
-                ->method('fetchAll')
+                ->method($fetchMethod)
                 ->willReturn($data[$idx])
             ;
 

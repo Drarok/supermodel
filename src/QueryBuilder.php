@@ -84,11 +84,11 @@ class QueryBuilder
         $this->metadata->getRelation($this->model, $relation);
 
         if (in_array($relation, $this->joins)) {
-            throw new \InvalidArgumentException("Duplicate join $relation");
+            throw new \InvalidArgumentException("Duplicate join relation: $relation");
         }
 
-        if (in_array($alias, $this->aliases)) {
-            throw new \InvalidArgumentException("Duplicate join alias $alias");
+        if (isset($this->aliases[$alias])) {
+            throw new \InvalidArgumentException("Duplicate join alias: $alias");
         }
 
         $this->joins[] = $relation;
@@ -221,7 +221,7 @@ class QueryBuilder
         $params = $this->getParams();
 
         if (($before = $this->before)) {
-            $before($sql, $params);
+            $before($sql, $params ?: null);
         }
 
         $stmt = $this->conn->prepare($sql);
