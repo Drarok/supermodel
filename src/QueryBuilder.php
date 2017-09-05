@@ -414,10 +414,9 @@ class QueryBuilder
             }
 
             if (count($missing) > 0) {
-                var_dump($relatedCache);
-
                 $missing = implode(', ', $missing);
-                throw new \InvalidArgumentException("Cannot use partially-filled cache for $this->model.$name - missing ids: $missing");
+                $error = "Cannot use partially-filled cache for $this->model.$name - missing ids: $missing";
+                throw new \InvalidArgumentException($error);
             }
 
             $data['.' . $name] = $objects;
