@@ -1,4 +1,4 @@
-# Supermodel [![Build Status](https://travis-ci.org/Drarok/supermodel.svg?branch=v2)](https://travis-ci.org/Drarok/supermodel)
+# Supermodel [![Build Status](https://travis-ci.org/Drarok/supermodel.svg?branch=v2)](https://travis-ci.org/Drarok/supermodel) [![Coverage Status](https://coveralls.io/repos/github/Drarok/supermodel/badge.svg?branch=v2)](https://coveralls.io/github/Drarok/supermodel?branch=v2)
 
 Supermodel is a super-simple model library for PHP >= 7.0.
 
