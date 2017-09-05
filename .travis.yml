@@ -5,8 +5,18 @@ php:
   - '7.1'
 
 install:
-  - composer install
+  - composer install --dev --no-interaction
 
 script:
-  - vendor/bin/phpunit
+  - mkdir -p build/logs
+  - vendor/bin/phpunit --coverage-clover build/logs/clover.xml
   - vendor/bin/phpcs --standard=PSR2 src/ tests/
+
+after_success:
+  - travis_retry vendor/bin/coveralls
+
+cache:
+  directories:
+  - vendor
+  - $HOME/.cache/composer
+
