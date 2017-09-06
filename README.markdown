@@ -17,7 +17,7 @@ composer require 'zerifas/supermodel:v2.x-dev'
 use Zerifas\Supermodel\AutoAccessorsTrait;
 use Zerifas\Supermodel\TimestampedModel;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
-use Zerifas\Supermodel\Transformers\BooleanTransformer;
+use Zerifas\Supermodel\Transformer\BooleanTransformer;
 
 class PostModel extends TimestampedModel
 {

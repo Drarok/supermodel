@@ -1,6 +1,6 @@
 <?php
 
-namespace Zerifas\Supermodel\Transformers;
+namespace Zerifas\Supermodel\Transformer;
 
 class BooleanTransformer implements TransformerInterface
 {

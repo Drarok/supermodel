@@ -3,11 +3,8 @@
 namespace Zerifas\Supermodel\Test\Metadata;
 
 use PHPUnit\Framework\TestCase;
-
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Metadata\MetadataCache;
-use Zerifas\Supermodel\SupermodelInterface;
-
 use Zerifas\Supermodel\Test\Model\MetadataTestModel;
 
 class MetadataCacheTest extends TestCase

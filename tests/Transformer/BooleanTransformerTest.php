@@ -1,10 +1,9 @@
 <?php
 
-namespace Zerifas\Supermodel\Test\Transformers;
+namespace Zerifas\Supermodel\Test\Transformer;
 
 use PHPUnit\Framework\TestCase;
-
-use Zerifas\Supermodel\Transformers\BooleanTransformer;
+use Zerifas\Supermodel\Transformer\BooleanTransformer;
 
 class BooleanTransformerTest extends TestCase
 {

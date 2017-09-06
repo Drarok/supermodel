@@ -1,10 +1,9 @@
 <?php
 
-namespace Zerifas\Supermodel\Test\Transformers;
+namespace Zerifas\Supermodel\Test\Transformer;
 
 use PHPUnit\Framework\TestCase;
-
-use Zerifas\Supermodel\Transformers\DateTimeTransformer;
+use Zerifas\Supermodel\Transformer\DateTimeTransformer;
 
 class DateTimeTransformerTest extends TestCase
 {

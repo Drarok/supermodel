@@ -6,7 +6,7 @@ use Zerifas\Supermodel\AutoAccessorsTrait;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\ManyToManyRelation;
 use Zerifas\Supermodel\TimestampedModel;
-use Zerifas\Supermodel\Transformers\BooleanTransformer;
+use Zerifas\Supermodel\Transformer\BooleanTransformer;
 
 class PostModel extends TimestampedModel
 {

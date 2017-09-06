@@ -4,7 +4,6 @@ namespace Zerifas\Supermodel;
 
 use PDO;
 use PDOStatement;
-
 use Zerifas\Supermodel\Cache\CacheInterface;
 use Zerifas\Supermodel\Metadata\MetadataCache;
 

@@ -2,10 +2,8 @@
 
 namespace Zerifas\Supermodel\Test;
 
-use function iterator_count;
 use PHPUnit\Framework\TestCase;
 use PHPUnit_Framework_MockObject_MockObject;
-
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\Metadata\MetadataCache;

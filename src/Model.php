@@ -7,7 +7,7 @@ use Zerifas\Supermodel\Relation\AbstractRelation;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\HasManyRelation;
 use Zerifas\Supermodel\Relation\ManyToManyRelation;
-use Zerifas\Supermodel\Transformers\TransformerInterface;
+use Zerifas\Supermodel\Transformer\TransformerInterface;
 
 abstract class Model implements SupermodelInterface
 {

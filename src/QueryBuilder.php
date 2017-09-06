@@ -4,12 +4,11 @@ namespace Zerifas\Supermodel;
 
 use Generator;
 use PDOStatement;
-
 use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Relation\BelongsToRelation;
 use Zerifas\Supermodel\Relation\HasManyRelation;
 use Zerifas\Supermodel\Relation\ManyToManyRelation;
-use Zerifas\Supermodel\Transformers\TransformerInterface;
+use Zerifas\Supermodel\Transformer\TransformerInterface;
 
 class QueryBuilder
 {

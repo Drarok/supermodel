@@ -2,12 +2,9 @@
 
 namespace Zerifas\Supermodel\Test;
 
-use PDOStatement;
 use PHPUnit\Framework\TestCase;
-use ReflectionObject;
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
-use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\QueryBuilder;
 use Zerifas\Supermodel\Test\Model\PostModel;
 
@@ -44,11 +41,6 @@ class ConnectionTest extends TestCase
         // TODO: Use mocks instead of a SQLite database.
         $this->conn = new Connection('', '', '', new MemoryCache(), $pdo);
         $this->conn->prepare('CREATE TABLE "posts" ("column" TEXT)')->execute();
-    }
-
-    public function testConstructor()
-    {
-        // ???
     }
 
     public function testGetMetadata()

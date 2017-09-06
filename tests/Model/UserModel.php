@@ -3,10 +3,9 @@
 namespace Zerifas\Supermodel\Test\Model;
 
 use Zerifas\Supermodel\AutoAccessorsTrait;
-use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\Model;
 use Zerifas\Supermodel\Relation\HasManyRelation;
-use Zerifas\Supermodel\Transformers\BooleanTransformer;
+use Zerifas\Supermodel\Transformer\BooleanTransformer;
 
 class UserModel extends Model
 {

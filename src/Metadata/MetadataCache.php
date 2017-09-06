@@ -6,7 +6,7 @@ use InvalidArgumentException;
 use Zerifas\Supermodel\Cache\CacheInterface;
 use Zerifas\Supermodel\Model;
 use Zerifas\Supermodel\Relation\AbstractRelation;
-use Zerifas\Supermodel\Transformers\TransformerInterface;
+use Zerifas\Supermodel\Transformer\TransformerInterface;
 
 class MetadataCache
 {

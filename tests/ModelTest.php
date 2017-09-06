@@ -3,9 +3,7 @@
 namespace Zerifas\Supermodel\Test;
 
 use DateTime;
-
 use PHPUnit\Framework\TestCase;
-
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Metadata\MetadataCache;
 use Zerifas\Supermodel\Test\Model\InvalidModel;

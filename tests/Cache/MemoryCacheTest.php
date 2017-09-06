@@ -3,7 +3,6 @@
 namespace Zerifas\Supermodel\Test\Cache;
 
 use Zerifas\Supermodel\Cache\CacheInterface;
-use Zerifas\Supermodel\Cache\FileCache;
 use Zerifas\Supermodel\Cache\MemoryCache;
 
 class MemoryCacheTest extends CacheInterfaceTest

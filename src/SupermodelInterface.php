@@ -3,7 +3,7 @@
 namespace Zerifas\Supermodel;
 
 use Zerifas\Supermodel\Relation\AbstractRelation;
-use Zerifas\Supermodel\Transformers\TransformerInterface;
+use Zerifas\Supermodel\Transformer\TransformerInterface;
 
 interface SupermodelInterface
 {

@@ -3,9 +3,8 @@
 namespace Zerifas\Supermodel;
 
 use DateTime;
-
-use Zerifas\Supermodel\Transformers\DateTimeTransformer;
 use Zerifas\Supermodel\Metadata\MetadataCache;
+use Zerifas\Supermodel\Transformer\DateTimeTransformer;
 
 abstract class TimestampedModel extends Model
 {
