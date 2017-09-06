@@ -2,7 +2,10 @@
 
 namespace Zerifas\Supermodel\Test;
 
+use PDO;
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
+use PHPUnit_Framework_MockObject_MockObject;
 use Zerifas\Supermodel\Cache\MemoryCache;
 use Zerifas\Supermodel\Connection;
 use Zerifas\Supermodel\QueryBuilder;
@@ -11,9 +14,14 @@ use Zerifas\Supermodel\Test\Model\PostModel;
 class ConnectionTest extends TestCase
 {
     /**
-     * @var PDO
+     * @var PDO|PHPUnit_Framework_MockObject_MockObject
      */
-    private $pdo;
+    protected $pdo;
+
+    /**
+     * @var PDOStatement|PHPUnit_Framework_MockObject_MockObject
+     */
+    protected $stmt;
 
     /**
      * @var Connection
@@ -24,23 +32,29 @@ class ConnectionTest extends TestCase
     {
         parent::setUp();
 
-        $stmt = $this->getMockBuilder(\PDOStatement::class)
+        $this->stmt = $this->getMockBuilder(\PDOStatement::class)
             ->disableOriginalConstructor()
             ->disableProxyingToOriginalMethods()
             ->getMock();
 
-        $pdo = $this->getMockBuilder(\PDO::class)
+        $this->pdo = $this->getMockBuilder(\PDO::class)
             ->disableOriginalConstructor()
             ->disableProxyingToOriginalMethods()
             ->getMock();
 
-        $pdo->expects($this->any())
+        $this->pdo->expects($this->any())
             ->method('prepare')
-            ->willReturn($stmt);
+            ->willReturn($this->stmt);
 
-        // TODO: Use mocks instead of a SQLite database.
-        $this->conn = new Connection('', '', '', new MemoryCache(), $pdo);
-        $this->conn->prepare('CREATE TABLE "posts" ("column" TEXT)')->execute();
+        $this->conn = new Connection('', '', '', new MemoryCache(), $this->pdo);
+    }
+
+    public function testConstructorWithDSN()
+    {
+        $dsn = 'sqlite::memory:';
+        $conn = new Connection($dsn, '', '', new MemoryCache());
+        $stmt = $conn->prepare('SELECT 1');
+        $this->assertInstanceOf(PDOStatement::class, $stmt);
     }
 
     public function testGetMetadata()
@@ -57,24 +71,19 @@ class ConnectionTest extends TestCase
 
     public function testPrepare()
     {
-        $stmt = $this->conn->prepare('SELECT * FROM "posts" WHERE "id" = ?');
-        $this->assertInstanceOf(\PDOStatement::class, $stmt);
+        $stmt = $this->conn->prepare('SELECT 1');
+        $this->assertInstanceOf(PDOStatement::class, $stmt);
     }
 
     public function testSaveCreate()
     {
+        /** @var PHPUnit_Framework_MockObject_MockObject|Connection $mockedConn */
         $mockedConn = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
+            ->enableOriginalConstructor()
+            ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
             ->setMethods(['create', 'update'])
             ->getMock();
-
-        $db = $this->createMock(\PDO::class);
-        $setupFakes = function () use ($db) {
-            $this->db = $db;
-        };
-        $bound = \Closure::bind($setupFakes, $mockedConn, Connection::class);
-        $bound();
 
         $mockedConn->expects($this->exactly(3))
             ->method('create');
@@ -89,18 +98,13 @@ class ConnectionTest extends TestCase
 
     public function testSaveUpdate()
     {
+        /** @var PHPUnit_Framework_MockObject_MockObject|Connection $mockedConn */
         $mockedConn = $this->getMockBuilder(Connection::class)
-            ->disableOriginalConstructor()
+            ->enableOriginalConstructor()
+            ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
             ->setMethods(['create', 'update'])
             ->getMock();
-
-        $db = $this->createMock(\PDO::class);
-        $setupFakes = function () use ($db) {
-            $this->db = $db;
-        };
-        $bound = \Closure::bind($setupFakes, $mockedConn, Connection::class);
-        $bound();
 
         $mockedConn->expects($this->never())
             ->method('create');
@@ -115,33 +119,20 @@ class ConnectionTest extends TestCase
 
     public function testCreate()
     {
-        $stmt = $this->getMockBuilder(\PDOStatement::class)
-            ->disableOriginalConstructor()
-            ->disableProxyingToOriginalMethods()
-            ->getMock();
-
-        $db = $this->getMockBuilder(\PDO::class)
-            ->disableOriginalConstructor()
-            ->disableProxyingToOriginalMethods()
-            ->getMock();
-
-        $conn = new Connection('', '', '', new MemoryCache(), $db);
-
         $sql = 'INSERT INTO `posts` (createdAt, updatedAt, authorId, userId, title, body) '
             . 'VALUES (?, ?, ?, ?, ?, ?)';
 
-        $db->expects($this->once())
+        $this->pdo->expects($this->once())
             ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt);
+            ->with($sql);
 
-        $db->expects($this->once())
+        $this->pdo->expects($this->once())
             ->method('lastInsertId')
             ->willReturn(1);
 
         $now = (new \DateTime())->format('Y-m-d H:i:s');
 
-        $stmt->expects($this->once())
+        $this->stmt->expects($this->once())
             ->method('execute')
             ->with([$now, $now, null, null, 'title 1', 'body 1'])
             ->willReturn(true);
@@ -149,40 +140,27 @@ class ConnectionTest extends TestCase
         $post = new PostModel();
         $post->setTitle('title 1');
         $post->setBody('body 1');
-        $conn->save($post);
+        $this->conn->save($post);
 
         $this->assertEquals(1, $post->getId());
     }
 
     public function testUpdate()
     {
-        $stmt = $this->getMockBuilder(\PDOStatement::class)
-            ->disableOriginalConstructor()
-            ->disableProxyingToOriginalMethods()
-            ->getMock();
-
-        $db = $this->getMockBuilder(\PDO::class)
-            ->disableOriginalConstructor()
-            ->disableProxyingToOriginalMethods()
-            ->getMock();
-
-        $conn = new Connection('', '', '', new MemoryCache(), $db);
-
         $sql = 'UPDATE `posts` SET createdAt = ?, updatedAt = ?, authorId = ?, userId = ?, title = ?, body = ? '
             . 'WHERE id = ?';
 
-        $db->expects($this->once())
+        $this->pdo->expects($this->once())
             ->method('prepare')
-            ->with($sql)
-            ->willReturn($stmt);
+            ->with($sql);
 
-        $db->expects($this->never())
+        $this->pdo->expects($this->never())
             ->method('lastInsertId');
 
         $then = '2017-09-05 15:47:48';
         $now = (new \DateTime())->format('Y-m-d H:i:s');
 
-        $stmt->expects($this->once())
+        $this->stmt->expects($this->once())
             ->method('execute')
             ->with([$then, $now, null, null, 'title 2', 'body 2', 10])
             ->willReturn(true);
@@ -192,7 +170,7 @@ class ConnectionTest extends TestCase
         $post->setCreatedAt(\DateTime::createFromFormat('Y-m-d H:i:s', $then));
         $post->setTitle('title 2');
         $post->setBody('body 2');
-        $conn->save($post);
+        $this->conn->save($post);
 
         $this->assertEquals(10, $post->getId());
     }

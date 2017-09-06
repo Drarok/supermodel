@@ -30,7 +30,11 @@ class Connection
                 PDO::ATTR_FETCH_TABLE_NAMES => true,
             ]);
 
-            $this->db->exec('SET @@group_concat_max_len = 1000000;');
+            // This code is MySQL-specific, so cannot be covered by tests.
+            $driverName = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driverName === 'mysql') {
+                $this->db->exec('SET @@group_concat_max_len = 10000000;'); // @codeCoverageIgnore
+            }
         }
 
         $this->metadata = new MetadataCache($cache);
