@@ -406,6 +406,16 @@ class QueryBuilderTest extends TestCase
                 'posts.body' => 'Post body 1',
                 '.tags' => '1,2',
             ],
+            [
+                'posts.id' => 2,
+                'posts.createdAt' => '2017-09-06 12:32:03',
+                'posts.updatedAt' => '2017-09-06 12:32:03',
+                'posts.authorId' => 1,
+                'posts.userId' => 1,
+                'posts.title' => 'Post title 2',
+                'posts.body' => 'Post body 2',
+                '.tags' => null,
+            ],
         ];
 
 

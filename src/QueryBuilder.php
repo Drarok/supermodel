@@ -208,7 +208,13 @@ class QueryBuilder
 
             $ids = [];
             foreach ($rows as $row) {
-                $foreignIds = array_map('intval', explode(',', $row['.' . $name] ?? ''));
+                $foreignIds = $row['.' . $name] ?? null;
+
+                if ($foreignIds === null) {
+                    continue;
+                }
+
+                $foreignIds = array_map('intval', explode(',', $foreignIds));
                 foreach ($foreignIds as $id) {
                     $ids[$id] = true;
                 }
