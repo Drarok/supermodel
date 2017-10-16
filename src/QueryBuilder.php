@@ -192,6 +192,11 @@ class QueryBuilder
      */
     private function fillRelatedCache(array $rows): array
     {
+        // If there are no rows, there's nothing to do.
+        if (count($rows) === 0) {
+            return [];
+        }
+
         $relatedCache = [];
 
         $relations = $this->metadata->getRelations($this->model);
