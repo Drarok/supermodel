@@ -104,6 +104,32 @@ class Connection
         $this->db->commit();
     }
 
+    public function delete(Model $obj): bool
+    {
+        $class = get_class($obj);
+        $table = $this->getMetadata()->getTableName($class);
+
+        $sql = "DELETE FROM `$table` WHERE `id` = ?";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$obj->getId()]);
+    }
+
+    public function deleteAll(array $objects): bool
+    {
+        $this->db->beginTransaction();
+
+        foreach ($objects as $obj) {
+            if (!$this->delete($obj)) {
+                $this->db->rollBack();
+                return false;
+            }
+        }
+
+        $this->db->commit();
+        return true;
+    }
+
     /**
      * Create a row in the database from the given model
      *
@@ -130,7 +156,7 @@ class Connection
         }
 
         $placeholders = implode(', ', array_fill(0, count($columns), '?'));
-        $columns = implode(', ', $columns);
+        $columns = '`' . implode('`, `', $columns) . '`';
 
         $sql = "INSERT INTO `$table` ($columns) VALUES ($placeholders)";
 
@@ -164,7 +190,7 @@ class Connection
                 continue;
             }
 
-            $set[] = "${column} = ?";
+            $set[] = "`${column}` = ?";
             $params[] = $data["${table}.${column}"] ?? null;
         }
         $params[] = $obj->getId();

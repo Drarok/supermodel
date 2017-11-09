@@ -119,7 +119,7 @@ class ConnectionTest extends TestCase
 
     public function testCreate()
     {
-        $sql = 'INSERT INTO `posts` (createdAt, updatedAt, authorId, userId, title, body) '
+        $sql = 'INSERT INTO `posts` (`createdAt`, `updatedAt`, `authorId`, `userId`, `title`, `body`) '
             . 'VALUES (?, ?, ?, ?, ?, ?)';
 
         $this->pdo->expects($this->once())
@@ -147,7 +147,8 @@ class ConnectionTest extends TestCase
 
     public function testUpdate()
     {
-        $sql = 'UPDATE `posts` SET createdAt = ?, updatedAt = ?, authorId = ?, userId = ?, title = ?, body = ? '
+        $sql = 'UPDATE `posts` SET '
+            . '`createdAt` = ?, `updatedAt` = ?, `authorId` = ?, `userId` = ?, `title` = ?, `body` = ? '
             . 'WHERE id = ?';
 
         $this->pdo->expects($this->once())
@@ -173,5 +174,68 @@ class ConnectionTest extends TestCase
         $this->conn->save($post);
 
         $this->assertEquals(10, $post->getId());
+    }
+
+    public function testDelete()
+    {
+        $sql = 'DELETE FROM `posts` WHERE `id` = ?';
+
+        $this->pdo->expects($this->once())
+            ->method('prepare')
+            ->with($sql);
+
+        $this->stmt->expects($this->once())
+            ->method('execute')
+            ->with([10])
+            ->willReturn(true);
+
+        $post = new PostModel();
+        $post->setId(10);
+        $this->assertTrue($this->conn->delete($post));
+    }
+
+    public function testDeleteAll()
+    {
+        $sql = 'DELETE FROM `posts` WHERE `id` = ?';
+
+        $this->pdo->expects($this->exactly(2))
+            ->method('prepare')
+            ->with($sql);
+
+        $this->stmt->expects($this->exactly(2))
+            ->method('execute')
+            ->withConsecutive([[10]], [[11]])
+            ->willReturn(true);
+
+        $models = [
+            (new PostModel())->setId(10),
+            (new PostModel())->setId(11),
+        ];
+
+        $this->assertTrue($this->conn->deleteAll($models));
+    }
+
+    public function testDeleteAllWithFailure()
+    {
+        $sql = 'DELETE FROM `posts` WHERE `id` = ?';
+
+        $this->pdo->expects($this->exactly(2))
+            ->method('prepare')
+            ->with($sql);
+
+        $this->pdo->expects($this->once())
+            ->method('rollback');
+
+        $this->stmt->expects($this->exactly(2))
+            ->method('execute')
+            ->withConsecutive([[10]], [[11]])
+            ->willReturnOnConsecutiveCalls(true, false);
+
+        $models = [
+            (new PostModel())->setId(10),
+            (new PostModel())->setId(11),
+        ];
+
+        $this->assertFalse($this->conn->deleteAll($models));
     }
 }
