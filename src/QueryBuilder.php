@@ -225,6 +225,10 @@ class QueryBuilder
                 }
             }
 
+            if (count($ids) === 0) {
+                continue;
+            }
+
             $objects = (new QueryBuilder($this->conn, $relation->getModel(), $name))
                 ->before($this->before)
                 ->where($name . '.id IN ?', ...array_keys($ids))

@@ -382,6 +382,38 @@ class QueryBuilderTest extends TestCase
         iterator_count($result);
     }
 
+    public function testHasManyRelationWithoutData()
+    {
+        $sql = [];
+        $params = [];
+        $data = [];
+
+        $sql[] = 'SELECT `users`.*, GROUP_CONCAT(`userPosts`.`id`) AS `userPosts` FROM `users` '
+            . 'LEFT OUTER JOIN `posts` AS `userPosts` ON `userPosts`.`userId` = `users`.`id` '
+            . 'WHERE `users`.`enabled` = ? '
+            . 'GROUP BY `users`.`id`'
+        ;
+        $params[] = [1];
+        $data[] = [
+            [
+                'users.id' => 1,
+                'users.username' => 'drarok',
+                'users.enabled' => 1,
+                '.userPosts' => null,
+            ]
+        ];
+
+        $this->expectSQLWithParamsToReturnData($sql, $params, $data);
+
+        $result = (new QueryBuilder($this->conn, UserModel::class, 'u'))
+            ->join('userPosts', 'up')
+            ->where('u.enabled = ?', true)
+            ->fetchAll()
+        ;
+
+        iterator_count($result);
+    }
+
     public function testManyToManyJoin()
     {
         $sql = [];
