@@ -17,7 +17,7 @@ class ModelTest extends TestCase
      */
     protected $metadata;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->metadata = new MetadataCache(new MemoryCache());
@@ -38,7 +38,7 @@ class ModelTest extends TestCase
 
         $obj = PostModel::createFromArray($data, $this->metadata, 'p');
 
-        $this->assertAttributeEquals(1, 'id', $obj);
+        $this->assertEquals(1, $obj->getId());
         $this->assertEquals('This is a title', $obj->getTitle());
 
         $dateTime = DateTime::createFromFormat('Y-m-d H:i:s', $date);
@@ -80,9 +80,9 @@ class ModelTest extends TestCase
 
         $user = $post->getUser();
         $this->assertInstanceOf(UserModel::class, $user);
-        $this->assertAttributeEquals(2, 'id', $user);
-        $this->assertAttributeEquals('drarok', 'username', $user);
-        $this->assertAttributeEquals(true, 'enabled', $user);
+        $this->assertEquals(2, $user->getId());
+        $this->assertEquals('drarok', $user->getUsername());
+        $this->assertEquals(true, $user->getEnabled());
     }
 
     public function testCreateWithHasManyRelation()

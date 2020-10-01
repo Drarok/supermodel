@@ -9,7 +9,7 @@ class AutoAccessorsTraitTest extends TestCase
 {
     private $model;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->model = new PostModel();
