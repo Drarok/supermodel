@@ -23,7 +23,7 @@ class QueryBuilderTest extends TestCase
      */
     protected $qb;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
