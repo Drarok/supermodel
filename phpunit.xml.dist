@@ -1,10 +1,10 @@
+<?xml version="1.0"?>
 <phpunit
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/6.3/phpunit.xsd"
+  xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
   backupGlobals="false"
   backupStaticAttributes="false"
   bootstrap="vendor/autoload.php"
-  cacheTokens="false"
   colors="true"
   convertErrorsToExceptions="true"
   convertNoticesToExceptions="true"
@@ -21,20 +21,19 @@
   timeoutForLargeTests="60"
   verbose="true"
 >
+  <coverage processUncoveredFiles="true">
+    <include>
+      <directory suffix=".php">src</directory>
+    </include>
+    <report>
+      <html outputDirectory="coverage" lowUpperBound="45" highLowerBound="90"/>
+      <text outputFile="php://stdout"/>
+    </report>
+  </coverage>
   <testsuites>
     <testsuite name="Supermodel Test Suite">
       <directory suffix="Test.php">tests</directory>
     </testsuite>
   </testsuites>
-
-  <filter>
-    <whitelist processUncoveredFilesFromWhitelist="true">
-      <directory suffix=".php">src</directory>
-    </whitelist>
-  </filter>
-
-  <logging>
-    <log type="coverage-html" target="coverage" lowUpperBound="45" highLowerBound="90" />
-    <log type="coverage-text" target="php://stdout" lowUpperBound="45" highLowerBound="90" />
-  </logging>
+  <logging/>
 </phpunit>

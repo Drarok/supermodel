@@ -128,7 +128,7 @@ class ConnectionTest extends TestCase
 
         $this->pdo->expects($this->once())
             ->method('lastInsertId')
-            ->willReturn(1);
+            ->willReturn('1');
 
         $now = (new \DateTime())->format('Y-m-d H:i:s');
 
