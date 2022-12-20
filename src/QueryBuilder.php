@@ -173,10 +173,6 @@ class QueryBuilder
         $stmt = $this->execute();
         $rows = $stmt->fetchAll();
 
-        if ($rows === false) {
-            throw new \UnexpectedValueException('Failed to execute query!');
-        }
-
         $relatedCache = $this->fillRelatedCache($rows);
         foreach ($rows as $row) {
             yield $this->createInstance($row, $relatedCache);

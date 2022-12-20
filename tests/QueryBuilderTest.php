@@ -324,25 +324,6 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals(3, $beforeCount);
     }
 
-    public function testInvalidQuery()
-    {
-        $this->expectException(\UnexpectedValueException::class);
-        $this->expectExceptionMessage('Failed to execute query!');
-
-        $stmt = $this->createMock('PDOStatement');
-        $stmt->expects($this->once())
-            ->method('fetchAll')
-            ->willReturn(false)
-        ;
-        $this->conn
-            ->expects($this->once())
-            ->method('prepare')
-            ->willReturn($stmt)
-        ;
-
-        iterator_count($this->qb->fetchAll());
-    }
-
     public function testHasManyRelation()
     {
         $sql = [];
