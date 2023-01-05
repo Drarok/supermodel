@@ -190,8 +190,8 @@ class Connection
                 continue;
             }
 
-            $set[] = "`${column}` = ?";
-            $params[] = $data["${table}.${column}"] ?? null;
+            $set[] = "`{$column}` = ?";
+            $params[] = $data["{$table}.{$column}"] ?? null;
         }
         $params[] = $obj->getId();
 
