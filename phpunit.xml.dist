@@ -1,15 +1,10 @@
 <?xml version="1.0"?>
 <phpunit
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+  xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
   backupGlobals="false"
-  backupStaticAttributes="false"
   bootstrap="vendor/autoload.php"
   colors="true"
-  convertErrorsToExceptions="true"
-  convertNoticesToExceptions="true"
-  convertWarningsToExceptions="true"
-  forceCoversAnnotation="false"
   processIsolation="false"
   stopOnError="false"
   stopOnFailure="false"
@@ -19,12 +14,11 @@
   timeoutForSmallTests="1"
   timeoutForMediumTests="10"
   timeoutForLargeTests="60"
-  verbose="true"
+  cacheDirectory=".phpunit.cache"
+  backupStaticProperties="false"
+  requireCoverageMetadata="false"
 >
-  <coverage processUncoveredFiles="true">
-    <include>
-      <directory suffix=".php">src</directory>
-    </include>
+  <coverage>
     <report>
       <html outputDirectory="coverage" lowUpperBound="45" highLowerBound="90"/>
       <text outputFile="php://stdout"/>
@@ -36,4 +30,9 @@
     </testsuite>
   </testsuites>
   <logging/>
+  <source>
+    <include>
+      <directory suffix=".php">src</directory>
+    </include>
+  </source>
 </phpunit>
