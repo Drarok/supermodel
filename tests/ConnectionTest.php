@@ -93,7 +93,7 @@ class ConnectionTest extends TestCase
         $model = new PostModel();
         $model->setId(1);
         $mockedConn->save(new PostModel());
-        $mockedConn->saveAll([new PostModel(), new PostModel()]);
+        $mockedConn->saveAll(new PostModel(), new PostModel());
     }
 
     public function testSaveUpdate()
@@ -114,7 +114,7 @@ class ConnectionTest extends TestCase
         $model = new PostModel();
         $model->setId(1);
         $mockedConn->save($model);
-        $mockedConn->saveAll([$model, $model]);
+        $mockedConn->saveAll($model, $model);
     }
 
     public function testCreate()
@@ -211,7 +211,7 @@ class ConnectionTest extends TestCase
             (new PostModel())->setId(11),
         ];
 
-        $this->assertTrue($this->conn->deleteAll($models));
+        $this->assertTrue($this->conn->deleteAll(...$models));
     }
 
     public function testDeleteAllWithFailure()
@@ -234,6 +234,6 @@ class ConnectionTest extends TestCase
             (new PostModel())->setId(11),
         ];
 
-        $this->assertFalse($this->conn->deleteAll($models));
+        $this->assertFalse($this->conn->deleteAll(...$models));
     }
 }
