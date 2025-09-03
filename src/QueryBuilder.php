@@ -121,7 +121,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function before(callable $before = null)
+    public function before(?callable $before = null)
     {
         $this->before = $before;
         return $this;

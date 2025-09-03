@@ -15,7 +15,7 @@ abstract class Model implements SupermodelInterface
 
     protected $__data = [];
 
-    public static function createFromArray(array $data, MetadataCache $metadata, string $alias = null): self
+    public static function createFromArray(array $data, MetadataCache $metadata, ?string $alias = null): self
     {
         $obj = new static();
 

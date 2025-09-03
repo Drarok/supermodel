@@ -17,7 +17,7 @@ class Connection
         string $username,
         string $password,
         CacheInterface $cache,
-        PDO $dbOverride = null
+        ?PDO $dbOverride = null
     ) {
         if ($dbOverride !== null) {
             $this->db = $dbOverride;
