@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Zerifas\Supermodel;
 
@@ -121,7 +121,7 @@ class QueryBuilder
         return $this;
     }
 
-    public function before(callable $before = null)
+    public function before(?callable $before = null)
     {
         $this->before = $before;
         return $this;

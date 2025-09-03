@@ -82,7 +82,7 @@ class ConnectionTest extends TestCase
             ->enableOriginalConstructor()
             ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
-            ->setMethods(['create', 'update'])
+            ->onlyMethods(['create', 'update'])
             ->getMock();
 
         $mockedConn->expects($this->exactly(3))
@@ -93,7 +93,7 @@ class ConnectionTest extends TestCase
         $model = new PostModel();
         $model->setId(1);
         $mockedConn->save(new PostModel());
-        $mockedConn->saveAll([new PostModel(), new PostModel()]);
+        $mockedConn->saveAll(new PostModel(), new PostModel());
     }
 
     public function testSaveUpdate()
@@ -103,7 +103,7 @@ class ConnectionTest extends TestCase
             ->enableOriginalConstructor()
             ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
-            ->setMethods(['create', 'update'])
+            ->onlyMethods(['create', 'update'])
             ->getMock();
 
         $mockedConn->expects($this->never())
@@ -114,7 +114,7 @@ class ConnectionTest extends TestCase
         $model = new PostModel();
         $model->setId(1);
         $mockedConn->save($model);
-        $mockedConn->saveAll([$model, $model]);
+        $mockedConn->saveAll($model, $model);
     }
 
     public function testCreate()
@@ -204,7 +204,6 @@ class ConnectionTest extends TestCase
 
         $this->stmt->expects($this->exactly(2))
             ->method('execute')
-            ->withConsecutive([[10]], [[11]])
             ->willReturn(true);
 
         $models = [
@@ -212,7 +211,7 @@ class ConnectionTest extends TestCase
             (new PostModel())->setId(11),
         ];
 
-        $this->assertTrue($this->conn->deleteAll($models));
+        $this->assertTrue($this->conn->deleteAll(...$models));
     }
 
     public function testDeleteAllWithFailure()
@@ -228,14 +227,13 @@ class ConnectionTest extends TestCase
 
         $this->stmt->expects($this->exactly(2))
             ->method('execute')
-            ->withConsecutive([[10]], [[11]])
-            ->willReturnOnConsecutiveCalls(true, false);
+            ->willReturn(true, false);
 
         $models = [
             (new PostModel())->setId(10),
             (new PostModel())->setId(11),
         ];
 
-        $this->assertFalse($this->conn->deleteAll($models));
+        $this->assertFalse($this->conn->deleteAll(...$models));
     }
 }

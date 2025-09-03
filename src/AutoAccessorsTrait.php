@@ -18,7 +18,7 @@ trait AutoAccessorsTrait
         $argCount = count($args);
         $key = strtolower(substr($method, 3, 1)) . substr($method, 4);
 
-        if (!isset($this->$key)) {
+        if (!property_exists($this, $key)) {
             $class = get_class($this);
             throw new \InvalidArgumentException("Property $key does not exist on $class");
         }

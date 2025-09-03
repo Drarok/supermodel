@@ -1,5 +1,6 @@
+/.github
 /.phpunit.result.cache
 /.phpunit.cache
 /coverage
-/supermodel.json
+/docker
 /vendor

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Zerifas\Supermodel;
 
@@ -56,14 +56,14 @@ abstract class TimestampedModel extends Model
         $now = new DateTime();
         $nowString = DateTimeTransformer::toArray($now);
 
-        $key = "${table}.createdAt";
+        $key = "{$table}.createdAt";
         if (empty($data[$key])) {
             $this->setCreatedAt($now);
             $data[$key] = $nowString;
         }
 
         $this->setUpdatedAt($now);
-        $data["${table}.updatedAt"] = $nowString;
+        $data["{$table}.updatedAt"] = $nowString;
 
         return $data;
     }

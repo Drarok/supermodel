@@ -1,6 +1,6 @@
 # Supermodel [![Build Status](https://github.com/Drarok/supermodel/actions/workflows/php.yml/badge.svg)](https://github.com/Drarok/supermodel/actions/workflows/php.yml) [![Coverage Status](https://coveralls.io/repos/github/Drarok/supermodel/badge.svg?branch=master)](https://coveralls.io/github/Drarok/supermodel?branch=master)
 
-Supermodel is a super-simple model library for PHP >= 8.0.
+Supermodel is a super-simple model library for PHP >= 8.3.
 
 ## Installation
 

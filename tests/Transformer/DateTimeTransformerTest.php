@@ -14,14 +14,14 @@ class DateTimeTransformerTest extends TestCase
         $str = '2016-01-01 00:00:00';
         $actual = DateTimeTransformer::fromArray($str);
 
-        $this->assertInstanceOf(\DateTime::class, $actual);
+        $this->assertInstanceOf(\DateTimeInterface::class, $actual);
         $this->assertEquals($str, $actual->format(self::FORMAT));
     }
 
     public function testToArray()
     {
         $str = '2016-01-01 00:00:00';
-        $date = \DateTime::createFromFormat(self::FORMAT, $str);
+        $date = \DateTimeImmutable::createFromFormat('!' . self::FORMAT, $str);
         $actual = DateTimeTransformer::toArray($date);
 
         $this->assertEquals($str, $actual);

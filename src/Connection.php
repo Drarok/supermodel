@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Zerifas\Supermodel;
 
@@ -9,15 +9,15 @@ use Zerifas\Supermodel\Metadata\MetadataCache;
 
 class Connection
 {
-    protected $db;
-    protected $metadata;
+    protected PDO $db;
+    protected MetadataCache $metadata;
 
     public function __construct(
         string $dsn,
         string $username,
         string $password,
         CacheInterface $cache,
-        PDO $dbOverride = null
+        ?PDO $dbOverride = null
     ) {
         if ($dbOverride !== null) {
             $this->db = $dbOverride;
@@ -45,39 +45,17 @@ class Connection
         return $this->metadata;
     }
 
-    /**
-     * Get a query builder for the given model
-     *
-     * @param string $class Name of the class
-     * @param string $alias Alias to use when specifying clauses
-     *
-     * @return QueryBuilder
-     */
     public function find(string $class, string $alias): QueryBuilder
     {
         return new QueryBuilder($this, $class, $alias);
     }
 
-    /**
-     * Prepare SQL on the underlying database
-     *
-     * @param string $sql Full SQL statement
-     *
-     * @return PDOStatement
-     */
     public function prepare(string $sql): PDOStatement
     {
         return $this->db->prepare($sql);
     }
 
-    /**
-     * Save the given model
-     *
-     * @param Model $obj
-     *
-     * @return void
-     */
-    public function save(Model $obj)
+    public function save(Model $obj): void
     {
         if ($obj->getId() === null) {
             $this->create($obj);
@@ -86,14 +64,7 @@ class Connection
         }
     }
 
-    /**
-     * Save an array of objects
-     *
-     * @param Model[] $objects
-     *
-     * @return void
-     */
-    public function saveAll(array $objects)
+    public function saveAll(Model ...$objects): void
     {
         $this->db->beginTransaction();
 
@@ -115,7 +86,7 @@ class Connection
         return $stmt->execute([$obj->getId()]);
     }
 
-    public function deleteAll(array $objects): bool
+    public function deleteAll(Model ...$objects): bool
     {
         $this->db->beginTransaction();
 
@@ -127,17 +98,11 @@ class Connection
         }
 
         $this->db->commit();
+
         return true;
     }
 
-    /**
-     * Create a row in the database from the given model
-     *
-     * @param Model $obj
-     *
-     * @return void
-     */
-    protected function create(Model $obj)
+    protected function create(Model $obj): void
     {
         $data = $obj->toArray($this->metadata);
 
@@ -163,20 +128,14 @@ class Connection
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
-        $obj->setId($this->db->lastInsertId());
+        $obj->setId((int) $this->db->lastInsertId());
 
         // TODO: Round-trip the database here to pick up default values.
     }
 
-    /**
-     * Update a row in the database from the given model
-     *
-     * @param Model $obj
-     *
-     * @return void
-     */
     protected function update(Model $obj)
     {
+        // TODO: Only update "dirty" fields.
         $data = $obj->toArray($this->metadata);
 
         $class = get_class($obj);

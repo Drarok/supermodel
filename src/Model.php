@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Zerifas\Supermodel;
 
@@ -11,11 +11,9 @@ use Zerifas\Supermodel\Transformer\TransformerInterface;
 
 abstract class Model implements SupermodelInterface
 {
-    protected $id;
+    protected ?int $id = null;
 
-    protected $__data = [];
-
-    public static function createFromArray(array $data, MetadataCache $metadata, string $alias = null): self
+    public static function createFromArray(array $data, MetadataCache $metadata, ?string $alias = null): self
     {
         $obj = new static();
 
@@ -68,26 +66,6 @@ abstract class Model implements SupermodelInterface
     {
     }
 
-    public function __set(string $name, mixed $value): void
-    {
-        $this->__data[$name] = $value;
-    }
-
-    public function __get(string $name): mixed
-    {
-        return $this->__data[$name];
-    }
-
-    public function __isset(string $name): bool
-    {
-        return array_key_exists($name, $this->__data);
-    }
-
-    public function __unset(string $name): void
-    {
-        unset($this->__data[$name]);
-    }
-
     public function setId(int $id): self
     {
         if ($this->id) {
@@ -98,7 +76,7 @@ abstract class Model implements SupermodelInterface
         return $this;
     }
 
-    public function getId()
+    public function getId(): ?int
     {
         return $this->id;
     }
