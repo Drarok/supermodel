@@ -491,7 +491,7 @@ class QueryBuilderTest extends TestCase
         array $sql,
         array $params,
         array $data,
-        array $fetchMethods = null
+        ?array $fetchMethods = null
     ) {
         $map = function ($sql) {
             return [$sql];
@@ -517,11 +517,19 @@ class QueryBuilderTest extends TestCase
             $statements[] = $stmt;
         }
 
+        $matcher = $this->exactly(count($sql));
+
         $this->conn
-            ->expects($this->exactly(count($sql)))
+            ->expects($matcher)
             ->method('prepare')
-            ->withConsecutive(...$sql)
-            ->willReturnOnConsecutiveCalls(...$statements)
+            ->willReturnCallback(function ($actual) use ($matcher, $statements, $sql) {
+                $idx = $matcher->numberOfInvocations() - 1;
+                $expected = $sql[$idx][0];
+
+                $this->assertEquals($expected, $actual);
+
+                return $statements[$idx];
+            })
         ;
     }
 }
