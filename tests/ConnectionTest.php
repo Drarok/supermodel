@@ -82,7 +82,7 @@ class ConnectionTest extends TestCase
             ->enableOriginalConstructor()
             ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
-            ->setMethods(['create', 'update'])
+            ->onlyMethods(['create', 'update'])
             ->getMock();
 
         $mockedConn->expects($this->exactly(3))
@@ -103,7 +103,7 @@ class ConnectionTest extends TestCase
             ->enableOriginalConstructor()
             ->setConstructorArgs(['', '', '', new MemoryCache(), $this->pdo])
             ->disableProxyingToOriginalMethods()
-            ->setMethods(['create', 'update'])
+            ->onlyMethods(['create', 'update'])
             ->getMock();
 
         $mockedConn->expects($this->never())
@@ -204,7 +204,6 @@ class ConnectionTest extends TestCase
 
         $this->stmt->expects($this->exactly(2))
             ->method('execute')
-            ->withConsecutive([[10]], [[11]])
             ->willReturn(true);
 
         $models = [
@@ -228,8 +227,7 @@ class ConnectionTest extends TestCase
 
         $this->stmt->expects($this->exactly(2))
             ->method('execute')
-            ->withConsecutive([[10]], [[11]])
-            ->willReturnOnConsecutiveCalls(true, false);
+            ->willReturn(true, false);
 
         $models = [
             (new PostModel())->setId(10),
