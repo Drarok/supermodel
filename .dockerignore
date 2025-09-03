@@ -1,0 +1,6 @@
+/.github
+/.phpunit.result.cache
+/.phpunit.cache
+/coverage
+/docker
+/vendor

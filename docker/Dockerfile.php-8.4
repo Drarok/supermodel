@@ -1,0 +1,9 @@
+FROM php:8.4-alpine
+
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
+
+WORKDIR /var/www/app
+
+COPY . /var/www/app
+
+RUN composer install
